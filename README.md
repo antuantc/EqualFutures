@@ -149,7 +149,7 @@ Then open the URL printed in the console (e.g. `https://localhost:xxxx`).
 ### First run
 
 1. The app applies database migrations automatically on startup (both the Identity and financial contexts).
-2. Click **Register** and create an account (email confirmation is not required).
+2. Click **Register** and create an account, then confirm the email address from the message sent by the configured Logic App.
 3. You'll land on an empty dashboard. Choose **Set up my family** to enter your own data, or **Load sample data** to explore a fully worked example you can edit or clear.
 
 ---
@@ -242,7 +242,7 @@ A plan can be shared with the whole family, each with their own login.
 ### Inviting someone
 
 1. The owner opens **Family Members** and enters the invitee's email and role.
-2. Because the app has no email service, a **secure invite link** is generated to copy and share (`/join/{token}`).
+2. A secure invite link (`/join/{token}`) is generated and emailed through the configured Logic App. The link is also shown in the UI so it can be copied if needed.
 3. The invitee registers (or signs in) **with the invited email**, then opens the link to join.
 4. They immediately see the shared household on their next visit.
 
@@ -284,6 +284,30 @@ dotnet user-secrets set "Email:LogicAppUrl" "<your-logic-app-trigger-url>" --pro
 If no URL is configured, the app runs normally but logs a warning instead of sending
 (so email failures never break registration). Because email confirmation is required,
 set this secret before registering real users.
+
+---
+
+## Azure App Service deployment
+
+The app targets **.NET 10**. If your App Service runtime stack does not include .NET 10 yet, publish self-contained instead of framework-dependent:
+
+```powershell
+dotnet publish src/EqualFutures.Web -c Release -r win-x64 --self-contained true
+```
+
+Use `linux-x64` instead of `win-x64` for a Linux App Service.
+
+SQLite writes must go to App Service's writable home directory. When the app detects Azure App Service, the default relative SQLite path (`Data/app.db`) is automatically resolved to `$HOME/data/app.db` before startup migrations run. You can also override it explicitly with an Azure App Setting:
+
+| Setting | Value |
+|---------|-------|
+| `ConnectionStrings__DefaultConnection` | `Data Source=D:\home\data\app.db;Cache=Shared` on Windows App Service, or `Data Source=/home/data/app.db;Cache=Shared` on Linux App Service |
+| `Email__LogicAppUrl` | Your Logic App HTTP trigger URL |
+| `Email__ToField` | `to` |
+| `Email__SubjectField` | `subject` |
+| `Email__BodyField` | `body` |
+
+If Azure shows **HTTP Error 500.30 - ASP.NET Core app failed to start**, check App Service **Log stream** first. The most common causes for this app are a framework-dependent deploy to an App Service without the .NET 10 runtime, or a startup migration failure caused by SQLite pointing at a read-only path.
 
 ---
 

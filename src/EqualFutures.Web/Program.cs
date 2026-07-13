@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using EqualFutures.Core;
 using EqualFutures.Infrastructure;
@@ -27,7 +28,7 @@ builder.Services.AddAuthentication(options =>
     })
     .AddIdentityCookies();
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+var connectionString = ResolveSqliteConnectionString(builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found."));
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
@@ -86,3 +87,29 @@ app.MapRazorComponents<App>()
 app.MapAdditionalIdentityEndpoints();
 
 app.Run();
+
+static string ResolveSqliteConnectionString(string connectionString)
+{
+    if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("WEBSITE_SITE_NAME")))
+    {
+        return connectionString;
+    }
+
+    var builder = new SqliteConnectionStringBuilder(connectionString);
+    if (string.IsNullOrWhiteSpace(builder.DataSource) || Path.IsPathRooted(builder.DataSource))
+    {
+        return connectionString;
+    }
+
+    var homeDirectory = Environment.GetEnvironmentVariable("HOME");
+    if (string.IsNullOrWhiteSpace(homeDirectory))
+    {
+        return connectionString;
+    }
+
+    var dataDirectory = Path.Combine(homeDirectory, "data");
+    Directory.CreateDirectory(dataDirectory);
+
+    builder.DataSource = Path.Combine(dataDirectory, Path.GetFileName(builder.DataSource));
+    return builder.ToString();
+}
