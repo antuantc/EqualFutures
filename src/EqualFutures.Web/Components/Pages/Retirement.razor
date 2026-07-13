@@ -1,0 +1,128 @@
+@page "/retirement"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject PlanState State
+
+<PageTitle>Retirement · EqualFutures</PageTitle>
+
+<div class="ef-page-header">
+    <h1>Retirement Planning</h1>
+    <p>Retirement comes first — you can't borrow for it. Adjust the assumptions to see the impact instantly.</p>
+</div>
+
+@if (!State.IsLoaded || State.Summary is null)
+{
+    <p>Loading…</p>
+}
+else
+{
+    var a = State.Plan!.Assumptions;
+    var r = State.Summary.Retirement;
+
+    <div class="ef-grid ef-grid-3">
+        <StatCard Label="Readiness" Value="@($"{r.ReadinessScore:0}%")"
+                  Pill="@(r.OnTrack ? "On track" : "Shortfall")" PillClass="@(r.OnTrack ? "good" : "bad")" />
+        <StatCard Label="Projected nest egg" Value="@r.ProjectedNestEgg.ToString("C0")"
+                  Sub="@($"at retirement in {r.YearsToRetirement} yrs")" />
+        <StatCard Label="Funding gap" Value="@r.FundingGap.ToString("C0")"
+                  Sub="@(r.OnTrack ? "Surplus" : "Shortfall vs. requirement")" />
+    </div>
+
+    <div class="ef-grid ef-grid-2" style="margin-top:1rem">
+        <div class="ef-card">
+            <h2>Assumptions</h2>
+            <div class="ef-field">
+                <label>Inflation: @Pct(a.InflationRate)</label>
+                <input type="range" class="form-range" min="0" max="0.06" step="0.005" @bind="a.InflationRate" @bind:event="oninput" @bind:after="Recompute" />
+            </div>
+            <div class="ef-field">
+                <label>Return before retirement: @Pct(a.PreRetirementReturn)</label>
+                <input type="range" class="form-range" min="0.02" max="0.12" step="0.005" @bind="a.PreRetirementReturn" @bind:event="oninput" @bind:after="Recompute" />
+            </div>
+            <div class="ef-field">
+                <label>Return during retirement: @Pct(a.PostRetirementReturn)</label>
+                <input type="range" class="form-range" min="0.02" max="0.10" step="0.005" @bind="a.PostRetirementReturn" @bind:event="oninput" @bind:after="Recompute" />
+            </div>
+            <div class="ef-field">
+                <label>Safe withdrawal rate: @Pct(a.SafeWithdrawalRate)</label>
+                <input type="range" class="form-range" min="0.025" max="0.06" step="0.0025" @bind="a.SafeWithdrawalRate" @bind:event="oninput" @bind:after="Recompute" />
+            </div>
+            <div class="ef-field">
+                <label>Plan until age: @a.PlanningHorizonAge</label>
+                <input type="range" class="form-range" min="85" max="100" step="1" @bind="a.PlanningHorizonAge" @bind:event="oninput" @bind:after="Recompute" />
+            </div>
+            <div class="ef-actions">
+                <button class="btn btn-primary" @onclick="Save">Save assumptions</button>
+                @if (saved) { <span class="ef-pill good" style="align-self:center">Saved</span> }
+            </div>
+        </div>
+
+        <div class="ef-card">
+            <h2>The numbers</h2>
+            <table class="ef-table">
+                <tbody>
+                    <tr><td>Annual spending need (future $)</td><td class="num">@r.AnnualSpendingNeed.ToString("C0")</td></tr>
+                    <tr><td>Guaranteed income (SS + pension)</td><td class="num">@r.AnnualGuaranteedIncome.ToString("C0")</td></tr>
+                    <tr><td>Must come from portfolio</td><td class="num">@r.AnnualPortfolioNeed.ToString("C0")</td></tr>
+                    <tr><td>Required nest egg</td><td class="num">@r.RequiredNestEgg.ToString("C0")</td></tr>
+                    <tr><td>Projected nest egg</td><td class="num">@r.ProjectedNestEgg.ToString("C0")</td></tr>
+                    <tr><td>Safe annual withdrawal</td><td class="num">@r.SafeAnnualWithdrawal.ToString("C0")</td></tr>
+                </tbody>
+            </table>
+            <div style="margin-top:1rem">
+                <div class="label" style="color:var(--ef-muted);font-size:.8rem;margin-bottom:.3rem">Readiness</div>
+                <MiniProgress Percent="r.ReadinessScore" />
+            </div>
+        </div>
+    </div>
+
+    <div class="ef-card" style="margin-top:1rem">
+        <h2>Projected portfolio growth</h2>
+        @if (r.GrowthTrajectory.Count > 1)
+        {
+            var pts = Sample(r.GrowthTrajectory, 12);
+            var max = r.GrowthTrajectory.Max(p => p.Balance);
+            <div class="ef-bar-chart">
+                @foreach (var p in pts)
+                {
+                    var h = max > 0 ? (double)(p.Balance / max) * 100 : 0;
+                    <div class="bar">
+                        <div class="fill" style="height:@h.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)%"
+                             title="@($"{p.Year}: {p.Balance:C0}")"></div>
+                        <div class="cap">@p.Year</div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private bool saved;
+
+    protected override async Task OnInitializedAsync() => await State.EnsureLoadedAsync();
+
+    private void Recompute()
+    {
+        saved = false;
+        State.Recompute();
+    }
+
+    private async Task Save()
+    {
+        await State.SaveAsync();
+        saved = true;
+    }
+
+    private static string Pct(decimal v) => v.ToString("P1");
+
+    private static IReadOnlyList<BalancePoint> Sample(IReadOnlyList<BalancePoint> points, int maxBars)
+    {
+        if (points.Count <= maxBars) return points;
+        var step = (double)(points.Count - 1) / (maxBars - 1);
+        var result = new List<BalancePoint>();
+        for (int i = 0; i < maxBars; i++)
+            result.Add(points[(int)Math.Round(i * step)]);
+        return result;
+    }
+}

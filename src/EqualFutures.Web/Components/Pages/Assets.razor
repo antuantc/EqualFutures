@@ -1,0 +1,173 @@
+@page "/assets"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject PlanState State
+
+<PageTitle>Assets &amp; Liabilities · EqualFutures</PageTitle>
+
+<div class="ef-page-header">
+    <h1>Assets &amp; Liabilities</h1>
+    <p>Everything you own and owe. Balances feed the retirement and education projections.</p>
+</div>
+
+@if (!State.IsLoaded)
+{
+    <p>Loading…</p>
+}
+else
+{
+    var plan = State.Plan!;
+
+    <div class="ef-card" style="margin-bottom:1rem">
+        <h2>Accounts &amp; assets</h2>
+        <table class="ef-table">
+            <thead>
+                <tr>
+                    <th>Name</th><th>Type</th><th>Group</th><th>Tax</th>
+                    <th class="num">Balance</th><th class="num">Annual contribution</th><th>For child</th><th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var a in plan.Accounts)
+                {
+                    <tr>
+                        <td><input class="form-control form-control-sm" @bind="a.Name" /></td>
+                        <td>
+                            <select class="form-select form-select-sm" @bind="a.Type">
+                                @foreach (var t in Enum.GetValues<AccountType>())
+                                {
+                                    <option value="@t">@Humanize(t)</option>
+                                }
+                            </select>
+                        </td>
+                        <td>
+                            <select class="form-select form-select-sm" @bind="a.Category">
+                                @foreach (var g in Enum.GetValues<AccountCategory>())
+                                {
+                                    <option value="@g">@g</option>
+                                }
+                            </select>
+                        </td>
+                        <td>
+                            <select class="form-select form-select-sm" @bind="a.TaxTreatment">
+                                @foreach (var tx in Enum.GetValues<TaxTreatment>())
+                                {
+                                    <option value="@tx">@Humanize(tx)</option>
+                                }
+                            </select>
+                        </td>
+                        <td class="num"><input type="number" class="form-control form-control-sm" @bind="a.CurrentBalance" /></td>
+                        <td class="num"><input type="number" class="form-control form-control-sm" @bind="a.AnnualContribution" /></td>
+                        <td>
+                            @if (a.Category == AccountCategory.Education)
+                            {
+                                <select class="form-select form-select-sm" @bind="a.BeneficiaryChildId">
+                                    <option value="">—</option>
+                                    @foreach (var c in plan.Children)
+                                    {
+                                        <option value="@c.Id">@c.Name</option>
+                                    }
+                                </select>
+                            }
+                        </td>
+                        <td><button class="btn btn-sm btn-outline-danger" @onclick="() => plan.Accounts.Remove(a)">✕</button></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <button class="btn btn-outline-secondary" style="margin-top:.75rem" @onclick="AddAccount">+ Add account</button>
+    </div>
+
+    <div class="ef-card" style="margin-bottom:1rem">
+        <h2>Liabilities</h2>
+        <table class="ef-table">
+            <thead>
+                <tr><th>Name</th><th>Type</th><th class="num">Balance</th><th class="num">Rate %</th><th class="num">Monthly payment</th><th></th></tr>
+            </thead>
+            <tbody>
+                @foreach (var l in plan.Liabilities)
+                {
+                    <tr>
+                        <td><input class="form-control form-control-sm" @bind="l.Name" /></td>
+                        <td>
+                            <select class="form-select form-select-sm" @bind="l.Type">
+                                @foreach (var t in Enum.GetValues<LiabilityType>())
+                                {
+                                    <option value="@t">@Humanize(t)</option>
+                                }
+                            </select>
+                        </td>
+                        <td class="num"><input type="number" class="form-control form-control-sm" @bind="l.CurrentBalance" /></td>
+                        <td class="num"><input type="number" step="0.001" class="form-control form-control-sm" @bind="l.InterestRate" /></td>
+                        <td class="num"><input type="number" class="form-control form-control-sm" @bind="l.MonthlyPayment" /></td>
+                        <td><button class="btn btn-sm btn-outline-danger" @onclick="() => plan.Liabilities.Remove(l)">✕</button></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <button class="btn btn-outline-secondary" style="margin-top:.75rem" @onclick="AddLiability">+ Add liability</button>
+    </div>
+
+    <div class="ef-actions">
+        <button class="btn btn-primary" @onclick="Save">Save changes</button>
+        @if (saved) { <span class="ef-pill good" style="align-self:center">Saved</span> }
+    </div>
+}
+
+@code {
+    private bool saved;
+
+    protected override async Task OnInitializedAsync() => await State.EnsureLoadedAsync();
+
+    private void AddAccount() => State.Plan!.Accounts.Add(new Account
+    {
+        Name = "New account",
+        Type = AccountType.Brokerage,
+        Category = AccountCategory.Investment,
+        TaxTreatment = TaxTreatment.Taxable
+    });
+
+    private void AddLiability() => State.Plan!.Liabilities.Add(new Liability
+    {
+        Name = "New liability",
+        Type = LiabilityType.Other
+    });
+
+    private async Task Save()
+    {
+        await State.SaveAsync();
+        saved = true;
+    }
+
+    private static string Humanize(AccountType t) => t switch
+    {
+        AccountType.FourZeroOneK => "401(k)",
+        AccountType.TraditionalIra => "Traditional IRA",
+        AccountType.RothIra => "Roth IRA",
+        AccountType.Brokerage => "Brokerage",
+        AccountType.Hsa => "HSA",
+        AccountType.FiveTwoNine => "529 plan",
+        AccountType.UtmaUgma => "UTMA/UGMA",
+        AccountType.EducationTrust => "Education trust",
+        AccountType.BankAccount => "Bank account",
+        AccountType.RealEstate => "Real estate",
+        AccountType.Business => "Business",
+        _ => t.ToString()
+    };
+
+    private static string Humanize(TaxTreatment t) => t switch
+    {
+        TaxTreatment.TaxDeferred => "Tax-deferred",
+        TaxTreatment.TaxFree => "Tax-free",
+        TaxTreatment.Taxable => "Taxable",
+        _ => t.ToString()
+    };
+
+    private static string Humanize(LiabilityType t) => t switch
+    {
+        LiabilityType.Mortgage => "Mortgage",
+        LiabilityType.StudentLoan => "Student loan",
+        LiabilityType.Other => "Other",
+        _ => t.ToString()
+    };
+}

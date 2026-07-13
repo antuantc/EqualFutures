@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/EqualFutures.Core/EqualFutures.Core.csproj" />
+    <Project Path="src/EqualFutures.Domain/EqualFutures.Domain.csproj" />
+    <Project Path="src/EqualFutures.Infrastructure/EqualFutures.Infrastructure.csproj" />
+    <Project Path="src/EqualFutures.Web/EqualFutures.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/EqualFutures.Core.Tests/EqualFutures.Core.Tests.csproj" />
+  </Folder>
+</Solution>

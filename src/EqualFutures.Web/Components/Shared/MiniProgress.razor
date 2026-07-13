@@ -1,0 +1,11 @@
+@{
+    var pct = Math.Clamp(Percent, 0m, 100m);
+    var cls = pct >= 90m ? "good" : pct >= 60m ? "warn" : "bad";
+}
+<div class="ef-progress @cls" title="@pct.ToString("0.#")%">
+    <span style="width:@pct.ToString(System.Globalization.CultureInfo.InvariantCulture)%"></span>
+</div>
+
+@code {
+    [Parameter] public decimal Percent { get; set; }
+}

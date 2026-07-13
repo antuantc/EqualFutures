@@ -1,0 +1,108 @@
+@page "/fairness"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject PlanState State
+@inject IFairnessEngine FairnessEngine
+
+<PageTitle>Fairness · EqualFutures</PageTitle>
+
+<div class="ef-page-header">
+    <h1>Fairness Engine</h1>
+    <p>Compare the support each child receives across every source — then decide what "fair" means to your family.</p>
+</div>
+
+@if (!State.IsLoaded || State.Summary is null)
+{
+    <p>Loading…</p>
+}
+else if (State.Summary.Education.Count < 2)
+{
+    <div class="ef-card">
+        <p>Fairness comparisons need at least two children. Add another on the <a href="family">Family Profile</a> page.</p>
+    </div>
+}
+else
+{
+    var result = FairnessEngine.Evaluate(State.Plan!, State.Summary.Education, selectedMetric);
+
+    <div class="ef-card" style="margin-bottom:1rem">
+        <div class="ef-field" style="max-width:520px">
+            <label>Fairness lens</label>
+            <select class="form-select" @bind="selectedMetric" @bind:after="OnMetricChanged">
+                @foreach (var m in Enum.GetValues<FairnessMetric>())
+                {
+                    <option value="@m">@Humanize(m)</option>
+                }
+            </select>
+        </div>
+        <p style="color:var(--ef-muted);margin:.25rem 0 0">@result.MetricDescription</p>
+    </div>
+
+    <div class="ef-grid ef-grid-3" style="margin-bottom:1rem">
+        <StatCard Label="Balance score" Value="@($"{result.FairnessScore:0}/100")"
+                  Pill="@(result.IsBalanced ? "Balanced" : "Uneven")"
+                  PillClass="@(result.IsBalanced ? "good" : "warn")" />
+        <StatCard Label="Equal-treatment target"
+                  Value="@FormatValue(result.EqualTarget, result.Children.FirstOrDefault()?.IsRatio ?? false)"
+                  Sub="What each child gets if perfectly balanced" />
+        <StatCard Label="Children compared" Value="@result.Children.Count.ToString()" />
+    </div>
+
+    <div class="ef-card">
+        <h2>Per-child comparison</h2>
+        <table class="ef-table">
+            <thead>
+                <tr><th>Child</th><th class="num">Value</th><th class="num">Share</th><th class="num">vs. equal</th><th>Balance</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var c in result.Children)
+                {
+                    <tr>
+                        <td>@c.ChildName</td>
+                        <td class="num">@FormatValue(c.Value, c.IsRatio)</td>
+                        <td class="num">@((c.Share * 100).ToString("0.#"))%</td>
+                        <td class="num" style="color:@(c.DeviationFromEqual >= 0 ? "var(--ef-good)" : "var(--ef-bad)")">
+                            @(c.DeviationFromEqual >= 0 ? "+" : "")@FormatValue(c.DeviationFromEqual, c.IsRatio)
+                        </td>
+                        <td style="min-width:160px"><MiniProgress Percent="ShareToPercent(c.Share, result.Children.Count)" /></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <p style="color:var(--ef-muted);margin-top:1rem">
+            Unequal distribution is a valid choice — this view makes the tradeoff visible so it's intentional, not accidental.
+        </p>
+    </div>
+}
+
+@code {
+    private FairnessMetric selectedMetric;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await State.EnsureLoadedAsync();
+        selectedMetric = State.Plan!.PreferredFairnessMetric;
+    }
+
+    private void OnMetricChanged() => State.Plan!.PreferredFairnessMetric = selectedMetric;
+
+    private static decimal ShareToPercent(decimal share, int childCount)
+    {
+        // Scale so an exactly-equal share maps to 100%.
+        var equal = childCount > 0 ? 1m / childCount : 1m;
+        return equal > 0 ? Math.Clamp(share / equal * 100m, 0m, 100m) : 0m;
+    }
+
+    private static string FormatValue(decimal v, bool isRatio) =>
+        isRatio ? (v * 100).ToString("0.#") + "%" : v.ToString("C0");
+
+    private static string Humanize(FairnessMetric m) => m switch
+    {
+        FairnessMetric.EqualDollarAmount => "Equal dollar amount",
+        FairnessMetric.EqualInflationAdjustedValue => "Equal inflation-adjusted value",
+        FairnessMetric.EqualPercentOfTuition => "Equal percent of tuition",
+        FairnessMetric.EqualLifetimeGifts => "Equal lifetime gifts",
+        FairnessMetric.EqualAfterTaxBenefit => "Equal after-tax benefit",
+        _ => m.ToString()
+    };
+}

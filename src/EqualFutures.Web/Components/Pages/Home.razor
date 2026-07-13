@@ -1,0 +1,128 @@
+﻿@page "/"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject PlanState State
+
+<PageTitle>Dashboard · EqualFutures</PageTitle>
+
+@if (!State.IsLoaded || State.Summary is null)
+{
+    <p>Loading your plan…</p>
+}
+else
+{
+    var s = State.Summary;
+    var r = s.Retirement;
+
+    <div class="ef-page-header">
+        <h1>@State.Plan!.HouseholdName</h1>
+        <p>A balanced view of your retirement security and your children's education.</p>
+    </div>
+
+    <div class="ef-grid ef-grid-4">
+        <StatCard Label="Retirement readiness"
+                  Value="@($"{r.ReadinessScore:0}%")"
+                  Sub="@($"Retires in {r.YearsToRetirement} yrs")"
+                  Pill="@(r.OnTrack ? "On track" : "Needs attention")"
+                  PillClass="@(r.OnTrack ? "good" : "warn")" />
+        <StatCard Label="Education funded"
+                  Value="@($"{s.EducationFundedPercent:0}%")"
+                  Sub="@($"{s.Education.Count} children")"
+                  Pill="@($"Fairness {s.Fairness.FairnessScore:0}/100")"
+                  PillClass="@(s.Fairness.IsBalanced ? "good" : "warn")" />
+        <StatCard Label="Net worth"
+                  Value="@s.NetWorth.ToString("C0")"
+                  Sub="@($"Assets {s.TotalAssets:C0} · Debt {s.TotalLiabilities:C0}")" />
+        <StatCard Label="Annual savings"
+                  Value="@s.AnnualSavings.ToString("C0")"
+                  Sub="@($"of {s.AnnualIncome:C0} income")" />
+    </div>
+
+    <div class="ef-grid ef-grid-2" style="margin-top:1rem">
+        <div class="ef-card">
+            <h2>Retirement portfolio growth</h2>
+            @if (r.GrowthTrajectory.Count > 1)
+            {
+                var pts = SampleTrajectory(r.GrowthTrajectory, 8);
+                var max = r.GrowthTrajectory.Max(p => p.Balance);
+                <div class="ef-bar-chart">
+                    @foreach (var p in pts)
+                    {
+                        var h = max > 0 ? (double)(p.Balance / max) * 100 : 0;
+                        <div class="bar">
+                            <div class="fill" style="height:@h.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)%"
+                                 title="@p.Balance.ToString("C0")"></div>
+                            <div class="cap">@p.Year</div>
+                        </div>
+                    }
+                </div>
+                <div class="sub" style="color:var(--ef-muted);margin-top:.5rem">
+                    Projected nest egg at retirement: <strong>@r.ProjectedNestEgg.ToString("C0")</strong>
+                    (need @r.RequiredNestEgg.ToString("C0"))
+                </div>
+            }
+        </div>
+
+        <div class="ef-card">
+            <h2>Investment allocation</h2>
+            <table class="ef-table">
+                <thead><tr><th>Category</th><th class="num">Balance</th><th class="num">Share</th></tr></thead>
+                <tbody>
+                @foreach (var a in s.Allocation)
+                {
+                    <tr>
+                        <td>@a.Category</td>
+                        <td class="num">@a.Amount.ToString("C0")</td>
+                        <td class="num">@a.Percent%</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+            <div style="margin-top:1rem">
+                <div class="label" style="color:var(--ef-muted);font-size:.8rem">Cash flow</div>
+                <table class="ef-table">
+                    <tbody>
+                        <tr><td>Income</td><td class="num">@s.AnnualIncome.ToString("C0")</td></tr>
+                        <tr><td>Savings &amp; contributions</td><td class="num">@s.AnnualSavings.ToString("C0")</td></tr>
+                        <tr><td>Debt payments</td><td class="num">@s.AnnualDebtPayments.ToString("C0")</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="ef-card" style="margin-top:1rem">
+        <h2>Alerts &amp; recommendations</h2>
+        @if (s.Recommendations.Count == 0)
+        {
+            <p>You're on track across the board. Nothing needs attention right now.</p>
+        }
+        else
+        {
+            @foreach (var rec in s.Recommendations)
+            {
+                var cls = rec.Severity == RecommendationSeverity.Warning ? "warn"
+                        : rec.Severity == RecommendationSeverity.Info ? "info" : "";
+                <div class="ef-rec @cls">
+                    <div class="rec-title">@rec.Title</div>
+                    <div class="rec-detail">@rec.Detail</div>
+                    <div class="rec-why">Why: @rec.Reasoning</div>
+                </div>
+            }
+        }
+    </div>
+}
+
+@code {
+    protected override async Task OnInitializedAsync() => await State.EnsureLoadedAsync();
+
+    private static IReadOnlyList<BalancePoint> SampleTrajectory(IReadOnlyList<BalancePoint> points, int maxBars)
+    {
+        if (points.Count <= maxBars) return points;
+        var step = (double)(points.Count - 1) / (maxBars - 1);
+        var result = new List<BalancePoint>();
+        for (int i = 0; i < maxBars; i++)
+            result.Add(points[(int)Math.Round(i * step)]);
+        return result;
+    }
+}

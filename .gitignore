@@ -1,0 +1,37 @@
+# Build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+
+# .NET / VS
+.vs/
+*.user
+*.suo
+*.userprefs
+project.lock.json
+artifacts/
+
+# Rider / VS Code (keep shared settings if any)
+.idea/
+
+# SQLite databases (local dev data)
+*.db
+*.db-shm
+*.db-wal
+
+# User secrets & environment
+*.env
+.env
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

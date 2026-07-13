@@ -1,0 +1,67 @@
+@page "/education"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject PlanState State
+
+<PageTitle>Education · EqualFutures</PageTitle>
+
+<div class="ef-page-header">
+    <h1>Education Planning</h1>
+    <p>Inflation-adjusted college costs and funding gaps for each child.</p>
+</div>
+
+@if (!State.IsLoaded || State.Summary is null)
+{
+    <p>Loading…</p>
+}
+else if (State.Summary.Education.Count == 0)
+{
+    <div class="ef-card">
+        <p>No children yet. Add them on the <a href="family">Family Profile</a> page.</p>
+    </div>
+}
+else
+{
+    <div class="ef-grid ef-grid-2">
+        @foreach (var e in State.Summary.Education)
+        {
+            <div class="ef-card">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <h2 style="margin:0">@e.ChildName</h2>
+                    <span class="ef-pill @(e.FundingGap <= 0 ? "good" : "warn")">
+                        @(e.FundingGap <= 0 ? "Fully funded" : $"Gap {e.FundingGap:C0}")
+                    </span>
+                </div>
+                <p style="color:var(--ef-muted);margin:.25rem 0 1rem">
+                    Starts @e.CollegeStartYear · @e.YearsUntilCollege years away
+                </p>
+
+                <div style="margin-bottom:.35rem;font-size:.85rem;color:var(--ef-muted)">
+                    Family target funded: @e.PercentFunded%
+                </div>
+                <MiniProgress Percent="e.PercentFunded" />
+
+                <table class="ef-table" style="margin-top:1rem">
+                    <tbody>
+                        <tr><td>Total cost (today's $)</td><td class="num">@e.TotalCostTodaysDollars.ToString("C0")</td></tr>
+                        <tr><td>Total cost (future $)</td><td class="num">@e.TotalCostFutureDollars.ToString("C0")</td></tr>
+                        <tr><td>Expected scholarships</td><td class="num">@e.ExpectedScholarships.ToString("C0")</td></tr>
+                        <tr><td>Family contribution target</td><td class="num">@e.DesiredFamilyContribution.ToString("C0")</td></tr>
+                        <tr><td>Projected 529 &amp; savings</td><td class="num">@e.ProjectedEducationSavings.ToString("C0")</td></tr>
+                        <tr><td>Student responsibility</td><td class="num">@e.StudentResponsibility.ToString("C0")</td></tr>
+                        <tr><td><strong>Remaining funding gap</strong></td><td class="num"><strong>@e.FundingGap.ToString("C0")</strong></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    <p style="color:var(--ef-muted);margin-top:1rem">
+        Adjust college type, funding percentage, and scholarships on the
+        <a href="family">Family Profile</a> page; balances on <a href="assets">Assets</a>.
+    </p>
+}
+
+@code {
+    protected override async Task OnInitializedAsync() => await State.EnsureLoadedAsync();
+}
