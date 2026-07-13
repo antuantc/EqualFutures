@@ -1,4 +1,6 @@
-using System.Net.Http.Json;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
 using Microsoft.Extensions.Options;
 
 namespace EqualFutures.Web.Services.Email;
@@ -26,27 +28,70 @@ public class LogicAppEmailSender(
             return;
         }
 
-        var payload = new { to, subject, body = htmlBody };
+        var payload = BuildPayload(opts, to, subject, htmlBody);
         var client = httpClientFactory.CreateClient(HttpClientName);
 
         try
         {
-            using var response = await client.PostAsJsonAsync(opts.LogicAppUrl, payload, ct);
+            var json = JsonSerializer.Serialize(payload);
+
+            // Send a clean "application/json" content type (no charset suffix) so the
+            // Logic App HTTP trigger reliably parses the body into an object; otherwise
+            // triggerBody()?['to'] can come back empty and the Gmail action fails.
+            using var content = new StringContent(json, Encoding.UTF8);
+            content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+
+            using var response = await client.PostAsync(opts.LogicAppUrl, content, ct);
             if (response.IsSuccessStatusCode)
             {
-                logger.LogInformation("Email sent to {Recipient} (subject: {Subject}).", to, subject);
+                logger.LogInformation(
+                    "Email sent to {Recipient} (subject: {Subject}). Logic App status {Status}.",
+                    to, subject, (int)response.StatusCode);
             }
             else
             {
                 // Intentionally do not log the URL (it contains a SAS signature).
+                var responseBody = await response.Content.ReadAsStringAsync(ct);
                 logger.LogError(
-                    "Logic App returned {StatusCode} sending email to {Recipient}.",
-                    (int)response.StatusCode, to);
+                    "Logic App returned {StatusCode} sending email to {Recipient}. Response: {Response}",
+                    (int)response.StatusCode, to, responseBody);
             }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to send email to {Recipient} via the Logic App.", to);
         }
+    }
+
+    /// <summary>
+    /// Builds the JSON payload. If explicit field names are configured, only those are
+    /// sent. Otherwise a robust set of common recipient/subject/body key spellings is
+    /// sent so the Gmail action finds a non-empty "To" regardless of how it's bound.
+    /// </summary>
+    private static Dictionary<string, string> BuildPayload(EmailOptions opts, string to, string subject, string htmlBody)
+    {
+        if (opts.HasExplicitFields)
+        {
+            return new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                [opts.ToField!] = to,
+                [opts.SubjectField ?? "subject"] = subject,
+                [opts.BodyField ?? "body"] = htmlBody
+            };
+        }
+
+        return new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["to"] = to,
+            ["To"] = to,
+            ["email"] = to,
+            ["emailAddress"] = to,
+            ["subject"] = subject,
+            ["Subject"] = subject,
+            ["body"] = htmlBody,
+            ["Body"] = htmlBody,
+            ["html"] = htmlBody,
+            ["message"] = htmlBody
+        };
     }
 }

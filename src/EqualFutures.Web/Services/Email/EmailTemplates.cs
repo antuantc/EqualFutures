@@ -3,8 +3,10 @@ using System.Net;
 namespace EqualFutures.Web.Services.Email;
 
 /// <summary>
-/// Builds branded HTML email bodies. User-controlled values (emails, household
-/// names) are HTML-encoded to prevent injection into the message markup.
+/// Builds branded HTML email bodies. Text values (emails, household names) are
+/// HTML-encoded to prevent injection. Links are embedded as-is: Identity already
+/// HTML-encodes confirmation/reset links before passing them here, and the join
+/// link is a URL-safe path, so re-encoding would corrupt them (e.g. &amp;amp;).
 /// </summary>
 public static class EmailTemplates
 {
@@ -21,7 +23,7 @@ public static class EmailTemplates
             <p>Welcome to EqualFutures! Please confirm your email address to activate your account.</p>
             {Button("Confirm my email", confirmationLink)}
             <p style="color:{Muted};font-size:13px">If the button doesn't work, copy and paste this link into your browser:<br/>
-            <a href="{HtmlAttr(confirmationLink)}" style="color:{Teal}">{Html(confirmationLink)}</a></p>
+            <a href="{confirmationLink}" style="color:{Teal}">{confirmationLink}</a></p>
             """);
         return ("Confirm your EqualFutures email", html);
     }
@@ -61,7 +63,7 @@ public static class EmailTemplates
             {Button("Join the family plan", joinLink)}
             <p style="color:{Muted};font-size:13px">Sign in (or register) with this email address, then open the link above.
             If the button doesn't work, paste this into your browser:<br/>
-            <a href="{HtmlAttr(joinLink)}" style="color:{Teal}">{Html(joinLink)}</a></p>
+            <a href="{joinLink}" style="color:{Teal}">{joinLink}</a></p>
             """);
         return ($"You're invited to join {householdName} on EqualFutures", html);
     }
@@ -80,12 +82,9 @@ public static class EmailTemplates
     private static string Button(string text, string href) =>
         $"""
         <p style="margin:20px 0">
-          <a href="{HtmlAttr(href)}" style="background:{Teal};color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:8px;display:inline-block;font-weight:600">{Html(text)}</a>
+          <a href="{href}" style="background:{Teal};color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:8px;display:inline-block;font-weight:600">{Html(text)}</a>
         </p>
         """;
 
     private static string Html(string value) => WebUtility.HtmlEncode(value ?? string.Empty);
-
-    // Links from Identity/NavigationManager are already valid URLs; encode for safe attribute embedding.
-    private static string HtmlAttr(string value) => WebUtility.HtmlEncode(value ?? string.Empty);
 }
