@@ -26,6 +26,7 @@ The guiding principle: **retirement comes first, because you cannot borrow for i
 - [Database & migrations](#database--migrations)
 - [The calculation engine](#the-calculation-engine)
 - [The Fairness Engine](#the-fairness-engine)
+- [Family collaboration](#family-collaboration)
 - [Configuration](#configuration)
 - [Security notes](#security-notes)
 - [Roadmap](#roadmap)
@@ -43,8 +44,9 @@ The guiding principle: **retirement comes first, because you cannot borrow for i
 | **Education Planning** | Per-child inflation-adjusted college cost, projected 529/savings, scholarships, family contribution, student responsibility, and remaining funding gap. |
 | **Fairness Engine** | The differentiator — compares how much support each child receives across **all** sources under five selectable fairness metrics, making intentional-versus-accidental inequality visible. |
 | **Recommendations** | Actionable, *explained* insights (increase savings, close a 529 gap, pay down high-rate debt, Roth-conversion opportunities), prioritizing retirement first. |
+| **Family collaboration** | Invite a spouse or children to their own logins on the shared plan, with roles (Owner / Adult / Child) controlling edit and management rights. |
 
-New users are seeded with a realistic sample household ("The Rivera Family") so every screen is populated on first sign-in.
+Each household is private to the signed-in user. New accounts start empty; a **sample household ("The Rivera Family")** can be loaded on demand from the Dashboard or Family Profile and cleared at any time. A plan can be **shared with other logins** (spouse, children) via invitations — see [Family collaboration](#family-collaboration).
 
 ---
 
@@ -148,7 +150,7 @@ Then open the URL printed in the console (e.g. `https://localhost:xxxx`).
 
 1. The app applies database migrations automatically on startup (both the Identity and financial contexts).
 2. Click **Register** and create an account (email confirmation is not required).
-3. You'll land on a dashboard pre-populated with a sample household you can edit or replace.
+3. You'll land on an empty dashboard. Choose **Set up my family** to enter your own data, or **Load sample data** to explore a fully worked example you can edit or clear.
 
 ---
 
@@ -225,6 +227,36 @@ The same family can look "unfair" by dollars yet "fair" by percent-of-tuition (e
 
 ---
 
+## Family collaboration
+
+A plan can be shared with the whole family, each with their own login.
+
+### Roles
+
+| Role | Rights |
+|------|--------|
+| **Owner** | Full control: edit the plan, invite/remove members, manage the family. The plan creator. |
+| **Adult** | Can view and edit the plan (e.g. a spouse), but cannot manage members. |
+| **Child** | Read-only access to the plan. |
+
+### Inviting someone
+
+1. The owner opens **Family Members** and enters the invitee's email and role.
+2. Because the app has no email service, a **secure invite link** is generated to copy and share (`/join/{token}`).
+3. The invitee registers (or signs in) **with the invited email**, then opens the link to join.
+4. They immediately see the shared household on their next visit.
+
+Access is resolved by membership, never by a client-supplied id, and new accounts still start with their own private plan until they accept an invitation.
+
+### Security
+
+- Invitation tokens are 256-bit cryptographically random values (`RandomNumberGenerator`), stored with a unique index.
+- A link is **bound to the invited email** — accepting requires the signed-in user's email to match, so a leaked link can't be used by someone else.
+- Only the **owner** can invite, revoke, or remove members; owners can't be removed or remove themselves.
+- Accepting is **idempotent** (re-opening a used link reports "already a member" rather than erroring).
+
+---
+
 ## Configuration
 
 Connection strings and settings live in `src/EqualFutures.Web/appsettings.json`:
@@ -239,13 +271,27 @@ Connection strings and settings live in `src/EqualFutures.Web/appsettings.json`:
 
 Point `DefaultConnection` at any SQLite path you prefer.
 
+### Email (Gmail via Azure Logic App)
+
+Transactional email (confirmation links, password resets, family invitations) is sent by
+POSTing `{ "to", "subject", "body" }` to a Gmail-backed Azure Logic App HTTP trigger.
+The trigger URL contains a SAS signature, so **store it as a secret — never commit it**:
+
+```powershell
+dotnet user-secrets set "Email:LogicAppUrl" "<your-logic-app-trigger-url>" --project src/EqualFutures.Web
+```
+
+If no URL is configured, the app runs normally but logs a warning instead of sending
+(so email failures never break registration). Because email confirmation is required,
+set this secret before registering real users.
+
 ---
 
 ## Security notes
 
 - The transitive `SQLitePCLRaw.lib.e_sqlite3` dependency is pinned to the patched `SQLitePCLRaw.bundle_e_sqlite3` **3.0.3** to resolve advisory GHSA-2m69-gcr7-jv3q.
-- Each plan is scoped to the owning Identity user; the app loads only the signed-in user's household.
-- Email confirmation is disabled by default for local convenience. Re-enable `SignIn.RequireConfirmedAccount` and configure a real `IEmailSender` before deploying.
+- Each plan is scoped to the owning Identity user; the app always resolves the household from the authenticated user's id and never from a client-supplied plan id, so users only ever see their own data (no IDOR).
+- Email confirmation is **required** before login. Email is delivered through an Azure Logic App whose trigger URL is a secret kept in user-secrets/environment (`Email:LogicAppUrl`), never committed. User-supplied values in emails are HTML-encoded, and the Logic App URL is never logged.
 
 ---
 
@@ -257,7 +303,7 @@ Planned next iterations:
 - **Monte Carlo** retirement simulations.
 - Social Security claiming strategies and Required Minimum Distributions.
 - Estate/trust planning, insurance and tax optimization, healthcare and long-term-care projections.
-- Goal tracking, document vault, family collaboration, and an AI financial advisor.
+- Goal tracking, document vault, and an AI financial advisor.
 
 ---
 

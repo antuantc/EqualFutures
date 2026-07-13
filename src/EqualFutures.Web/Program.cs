@@ -8,6 +8,7 @@ using EqualFutures.Web.Components;
 using EqualFutures.Web.Components.Account;
 using EqualFutures.Web.Data;
 using EqualFutures.Web.Services;
+using EqualFutures.Web.Services.Email;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -38,14 +39,18 @@ builder.Services.AddScoped<PlanState>();
 
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
     {
-        options.SignIn.RequireConfirmedAccount = false;
+        options.SignIn.RequireConfirmedAccount = true;
         options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
     })
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddSignInManager()
     .AddDefaultTokenProviders();
 
-builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+// Email delivery via the Gmail-backed Azure Logic App.
+builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailOptions.SectionName));
+builder.Services.AddHttpClient(LogicAppEmailSender.HttpClientName);
+builder.Services.AddTransient<IAppEmailSender, LogicAppEmailSender>();
+builder.Services.AddTransient<IEmailSender<ApplicationUser>, IdentityEmailSender>();
 
 var app = builder.Build();
 

@@ -19,6 +19,14 @@ else
     var a = State.Plan!.Assumptions;
     var r = State.Summary.Retirement;
 
+    @if (!State.CanEdit)
+    {
+        <div class="ef-rec info" style="margin-bottom:1rem">
+            <div class="rec-title">Read-only access</div>
+            <div class="rec-detail">You can explore the projections, but assumption changes won't be saved.</div>
+        </div>
+    }
+
     <div class="ef-grid ef-grid-3">
         <StatCard Label="Readiness" Value="@($"{r.ReadinessScore:0}%")"
                   Pill="@(r.OnTrack ? "On track" : "Shortfall")" PillClass="@(r.OnTrack ? "good" : "bad")" />
@@ -52,7 +60,7 @@ else
                 <input type="range" class="form-range" min="85" max="100" step="1" @bind="a.PlanningHorizonAge" @bind:event="oninput" @bind:after="Recompute" />
             </div>
             <div class="ef-actions">
-                <button class="btn btn-primary" @onclick="Save">Save assumptions</button>
+                <button class="btn btn-primary" @onclick="Save" disabled="@(!State.CanEdit)">Save assumptions</button>
                 @if (saved) { <span class="ef-pill good" style="align-self:center">Saved</span> }
             </div>
         </div>

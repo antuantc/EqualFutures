@@ -1,0 +1,67 @@
+@page "/join/{token}"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject PlanState State
+@inject NavigationManager Nav
+
+<PageTitle>Join a Family · EqualFutures</PageTitle>
+
+<div class="ef-page-header">
+    <h1>Join a family plan</h1>
+</div>
+
+<div class="ef-card" style="max-width:620px">
+    @if (working)
+    {
+        <p>Accepting your invitation…</p>
+    }
+    else if (outcome == AcceptOutcome.Success)
+    {
+        <h2>You're in 🎉</h2>
+        <p>You've joined <strong>@household</strong>. You now share this family's plan.</p>
+        <a class="btn btn-primary" href="">Go to dashboard</a>
+    }
+    else if (outcome == AcceptOutcome.AlreadyMember)
+    {
+        <h2>Already a member</h2>
+        <p>You already have access to <strong>@household</strong>.</p>
+        <a class="btn btn-primary" href="">Go to dashboard</a>
+    }
+    else if (outcome == AcceptOutcome.EmailMismatch)
+    {
+        <h2>This invite is for a different email</h2>
+        <p>
+            You're signed in as <strong>@State.UserEmail</strong>, but this invitation was sent to a different address.
+            Sign in with the invited email, then open the link again.
+        </p>
+        <form action="Account/Logout" method="post">
+            <AntiforgeryToken />
+            <input type="hidden" name="ReturnUrl" value="@currentPath" />
+            <button type="submit" class="btn btn-outline-secondary">Switch account</button>
+        </form>
+    }
+    else
+    {
+        <h2>Invitation not valid</h2>
+        <p>This invitation link is invalid, has expired, or was revoked. Ask the plan owner to send a new one.</p>
+        <a class="btn btn-outline-secondary" href="">Go to dashboard</a>
+    }
+</div>
+
+@code {
+    [Parameter] public string Token { get; set; } = string.Empty;
+
+    private bool working = true;
+    private AcceptOutcome outcome;
+    private string? household;
+    private string currentPath = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentPath = new Uri(Nav.Uri).AbsolutePath;
+        var result = await State.AcceptInvitationAsync(Token);
+        outcome = result.Outcome;
+        household = result.HouseholdName;
+        working = false;
+    }
+}

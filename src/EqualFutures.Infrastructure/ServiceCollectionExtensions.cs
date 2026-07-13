@@ -17,6 +17,7 @@ public static class ServiceCollectionExtensions
                 sqlite.MigrationsHistoryTable(MigrationsHistoryTable)));
 
         services.AddScoped<IPlanService, PlanService>();
+        services.AddScoped<IFamilyService, FamilyService>();
         return services;
     }
 }

@@ -71,3 +71,24 @@ public enum FairnessMetric
     EqualLifetimeGifts,
     EqualAfterTaxBenefit
 }
+
+/// <summary>A member's level of access to a shared household plan.</summary>
+public enum PlanRole
+{
+    /// <summary>Full control: edit everything, invite members, manage the family.</summary>
+    Owner,
+
+    /// <summary>An adult (e.g. spouse): can view and edit the plan, but not manage members.</summary>
+    Adult,
+
+    /// <summary>A child: read-only access to the plan.</summary>
+    Child
+}
+
+/// <summary>Lifecycle state of a family invitation.</summary>
+public enum InvitationStatus
+{
+    Pending,
+    Accepted,
+    Revoked
+}

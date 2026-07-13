@@ -9,6 +9,28 @@
 {
     <p>Loading your plan…</p>
 }
+else if (State.IsEmpty)
+{
+    <div class="ef-page-header">
+        <h1>Welcome to EqualFutures</h1>
+        <p>Your household is private to your account. Start by entering your family, or load a sample to explore.</p>
+    </div>
+
+    <div class="ef-card" style="max-width:680px">
+        <h2>Get started</h2>
+        <p>Two ways to begin:</p>
+        <ul>
+            <li><strong>Enter your own data</strong> — add parents and children on the Family Profile, then your accounts.</li>
+            <li><strong>Explore a sample</strong> — load a fully worked example household you can edit or clear at any time.</li>
+        </ul>
+        <div class="ef-actions">
+            <a class="btn btn-primary" href="family">Set up my family</a>
+            <button class="btn btn-outline-secondary" @onclick="LoadSample" disabled="@busy">
+                @(busy ? "Loading…" : "Load sample data")
+            </button>
+        </div>
+    </div>
+}
 else
 {
     var s = State.Summary;
@@ -115,6 +137,15 @@ else
 
 @code {
     protected override async Task OnInitializedAsync() => await State.EnsureLoadedAsync();
+
+    private bool busy;
+
+    private async Task LoadSample()
+    {
+        busy = true;
+        await State.LoadSampleDataAsync();
+        busy = false;
+    }
 
     private static IReadOnlyList<BalancePoint> SampleTrajectory(IReadOnlyList<BalancePoint> points, int maxBars)
     {

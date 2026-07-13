@@ -18,11 +18,40 @@ else
 {
     var plan = State.Plan!;
 
+    @if (!State.CanEdit)
+    {
+        <div class="ef-rec info" style="margin-bottom:1rem">
+            <div class="rec-title">Read-only access</div>
+            <div class="rec-detail">You can view this family's plan but not make changes. Ask the plan owner for edit access.</div>
+        </div>
+    }
+
     <div class="ef-card" style="margin-bottom:1rem">
         <div class="ef-field" style="max-width:420px">
             <label>Household name</label>
-            <input class="form-control" @bind="plan.HouseholdName" />
+            <input class="form-control" @bind="plan.HouseholdName" disabled="@(!State.CanEdit)" />
         </div>
+        @if (State.CanEdit)
+        {
+            <div class="ef-actions">
+                @if (State.IsEmpty)
+                {
+                    <button class="btn btn-outline-secondary" @onclick="LoadSample" disabled="@busy">
+                        @(busy ? "Loading…" : "Load sample data")
+                    </button>
+                }
+                else if (!confirmingClear)
+                {
+                    <button class="btn btn-outline-danger" @onclick="() => confirmingClear = true" disabled="@busy">Clear all data</button>
+                }
+                else
+                {
+                    <span style="align-self:center">Remove all people, accounts, and liabilities?</span>
+                    <button class="btn btn-danger" @onclick="ClearData" disabled="@busy">Yes, clear everything</button>
+                    <button class="btn btn-outline-secondary" @onclick="() => confirmingClear = false" disabled="@busy">Cancel</button>
+                }
+            </div>
+        }
     </div>
 
     <div class="ef-card" style="margin-bottom:1rem">
@@ -38,11 +67,11 @@ else
                 <div class="ef-field"><label>Social Security / yr</label><input type="number" class="form-control" @bind="p.EstimatedAnnualSocialSecurity" /></div>
                 <div class="ef-field"><label>Pension / yr</label><input type="number" class="form-control" @bind="p.AnnualPensionIncome" /></div>
                 <div class="ef-field">
-                    <button class="btn btn-outline-danger" @onclick="() => RemoveParent(p)">Remove</button>
+                    <button class="btn btn-outline-danger" @onclick="() => RemoveParent(p)" disabled="@(!State.CanEdit)">Remove</button>
                 </div>
             </div>
         }
-        <button class="btn btn-outline-secondary" @onclick="AddParent">+ Add parent</button>
+        <button class="btn btn-outline-secondary" @onclick="AddParent" disabled="@(!State.CanEdit)">+ Add parent</button>
     </div>
 
     <div class="ef-card" style="margin-bottom:1rem">
@@ -66,15 +95,15 @@ else
                 <div class="ef-field"><label>Funding target (%)</label><input type="number" step="0.05" class="form-control" @bind="c.DesiredFundingPercent" /></div>
                 <div class="ef-field"><label>Scholarships / yr</label><input type="number" class="form-control" @bind="c.ExpectedAnnualScholarships" /></div>
                 <div class="ef-field">
-                    <button class="btn btn-outline-danger" @onclick="() => RemoveChild(c)">Remove</button>
+                    <button class="btn btn-outline-danger" @onclick="() => RemoveChild(c)" disabled="@(!State.CanEdit)">Remove</button>
                 </div>
             </div>
         }
-        <button class="btn btn-outline-secondary" @onclick="AddChild">+ Add child</button>
+        <button class="btn btn-outline-secondary" @onclick="AddChild" disabled="@(!State.CanEdit)">+ Add child</button>
     </div>
 
     <div class="ef-actions">
-        <button class="btn btn-primary" @onclick="Save">Save changes</button>
+        <button class="btn btn-primary" @onclick="Save" disabled="@(!State.CanEdit)">Save changes</button>
         @if (saved)
         {
             <span class="ef-pill good" style="align-self:center">Saved</span>
@@ -84,8 +113,27 @@ else
 
 @code {
     private bool saved;
+    private bool busy;
+    private bool confirmingClear;
 
     protected override async Task OnInitializedAsync() => await State.EnsureLoadedAsync();
+
+    private async Task LoadSample()
+    {
+        busy = true;
+        await State.LoadSampleDataAsync();
+        busy = false;
+        saved = false;
+    }
+
+    private async Task ClearData()
+    {
+        busy = true;
+        await State.ClearDataAsync();
+        confirmingClear = false;
+        busy = false;
+        saved = false;
+    }
 
     private void AddParent() => State.Plan!.Parents.Add(new Parent { Name = "New parent", CurrentAge = 40, PlannedRetirementAge = 65 });
     private void RemoveParent(Parent p) => State.Plan!.Parents.Remove(p);

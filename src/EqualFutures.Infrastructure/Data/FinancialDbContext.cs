@@ -15,6 +15,8 @@ public class FinancialDbContext(DbContextOptions<FinancialDbContext> options) : 
     public DbSet<Child> Children => Set<Child>();
     public DbSet<Account> Accounts => Set<Account>();
     public DbSet<Liability> Liabilities => Set<Liability>();
+    public DbSet<PlanMember> PlanMembers => Set<PlanMember>();
+    public DbSet<PlanInvitation> PlanInvitations => Set<PlanInvitation>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -28,6 +30,20 @@ public class FinancialDbContext(DbContextOptions<FinancialDbContext> options) : 
             e.HasMany(p => p.Children).WithOne().HasForeignKey(x => x.FinancialPlanId).OnDelete(DeleteBehavior.Cascade);
             e.HasMany(p => p.Accounts).WithOne().HasForeignKey(x => x.FinancialPlanId).OnDelete(DeleteBehavior.Cascade);
             e.HasMany(p => p.Liabilities).WithOne().HasForeignKey(x => x.FinancialPlanId).OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(p => p.Members).WithOne().HasForeignKey(x => x.FinancialPlanId).OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(p => p.Invitations).WithOne().HasForeignKey(x => x.FinancialPlanId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<PlanMember>(e =>
+        {
+            e.HasIndex(m => m.UserId);
+            e.HasIndex(m => new { m.FinancialPlanId, m.UserId }).IsUnique();
+        });
+
+        b.Entity<PlanInvitation>(e =>
+        {
+            e.HasIndex(i => i.Token).IsUnique();
+            e.HasIndex(i => i.Email);
         });
 
         // Store monetary values with fixed precision.

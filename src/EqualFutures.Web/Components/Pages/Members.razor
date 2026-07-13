@@ -1,0 +1,176 @@
+@page "/family/members"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject PlanState State
+@inject NavigationManager Nav
+@inject EqualFutures.Web.Services.Email.IAppEmailSender Email
+
+<PageTitle>Family Members · EqualFutures</PageTitle>
+
+<div class="ef-page-header">
+    <h1>Family Members</h1>
+    <p>Give your spouse and children their own logins to the shared plan.</p>
+</div>
+
+@if (!State.IsLoaded)
+{
+    <p>Loading…</p>
+}
+else
+{
+    <div class="ef-card" style="margin-bottom:1rem">
+        <h2>Members</h2>
+        <table class="ef-table">
+            <thead>
+                <tr><th>Email</th><th>Role</th><th>Access</th><th></th></tr>
+            </thead>
+            <tbody>
+                @foreach (var m in State.Plan!.Members.OrderBy(m => m.Role))
+                {
+                    <tr>
+                        <td>
+                            @(string.IsNullOrWhiteSpace(m.Email) ? "(no email)" : m.Email)
+                            @if (m.UserId == State.UserId) { <span class="ef-pill good" style="margin-left:.4rem">You</span> }
+                        </td>
+                        <td>@Humanize(m.Role)</td>
+                        <td>@(m.CanEdit ? "Can edit" : "Read-only")</td>
+                        <td>
+                            @if (State.CanManageFamily && m.Role != PlanRole.Owner && m.UserId != State.UserId)
+                            {
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveMember(m.UserId)">Remove</button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (State.CanManageFamily)
+    {
+        <div class="ef-card" style="margin-bottom:1rem">
+            <h2>Invite someone</h2>
+            <div class="ef-grid ef-grid-3" style="align-items:end">
+                <div class="ef-field">
+                    <label>Email</label>
+                    <input class="form-control" type="email" @bind="inviteEmail" placeholder="name@example.com" />
+                </div>
+                <div class="ef-field">
+                    <label>Role</label>
+                    <select class="form-select" @bind="inviteRole">
+                        <option value="@PlanRole.Adult">Adult (can edit)</option>
+                        <option value="@PlanRole.Child">Child (read-only)</option>
+                    </select>
+                </div>
+                <div class="ef-field">
+                    <button class="btn btn-primary" @onclick="Invite" disabled="@(busy || string.IsNullOrWhiteSpace(inviteEmail))">
+                        @(busy ? "Creating…" : "Create invite")
+                    </button>
+                </div>
+            </div>
+            @if (!string.IsNullOrEmpty(error))
+            {
+                <p style="color:var(--ef-bad)">@error</p>
+            }
+            <p style="color:var(--ef-muted);margin:0">
+                We'll email an invite link to this address. They must register (or sign in) with this exact email to join.
+            </p>
+        </div>
+
+        <div class="ef-card">
+            <h2>Pending invitations</h2>
+            @{
+                var pending = State.Plan!.Invitations
+                    .Where(i => i.Status == InvitationStatus.Pending && i.ExpiresUtc > DateTime.UtcNow)
+                    .OrderByDescending(i => i.CreatedUtc)
+                    .ToList();
+            }
+            @if (pending.Count == 0)
+            {
+                <p>No pending invitations.</p>
+            }
+            else
+            {
+                <table class="ef-table">
+                    <thead>
+                        <tr><th>Email</th><th>Role</th><th>Invite link</th><th>Expires</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var i in pending)
+                        {
+                            <tr>
+                                <td>@i.Email</td>
+                                <td>@Humanize(i.Role)</td>
+                                <td><input class="form-control form-control-sm" readonly value="@JoinLink(i.Token)" /></td>
+                                <td>@i.ExpiresUtc.ToLocalTime().ToString("d")</td>
+                                <td><button class="btn btn-sm btn-outline-danger" @onclick="() => Revoke(i.Id)">Revoke</button></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                <p style="color:var(--ef-muted);margin-top:.75rem">
+                    Copy an invite link and share it with the family member. Anyone with the link still needs to sign in with the invited email.
+                </p>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="ef-card">
+            <p>Only the plan owner can invite or manage members.</p>
+        </div>
+    }
+}
+
+@code {
+    private string inviteEmail = string.Empty;
+    private PlanRole inviteRole = PlanRole.Adult;
+    private bool busy;
+    private string? error;
+
+    protected override async Task OnInitializedAsync() => await State.EnsureLoadedAsync();
+
+    private string JoinLink(string token) => $"{Nav.BaseUri}join/{token}";
+
+    private async Task Invite()
+    {
+        error = null;
+        busy = true;
+        try
+        {
+            var email = inviteEmail.Trim();
+            var role = inviteRole;
+            var invitation = await State.InviteAsync(email, role);
+
+            // Email the invitee their join link (best-effort; logged if it fails).
+            var (subject, html) = EqualFutures.Web.Services.Email.EmailTemplates.Invitation(
+                State.Plan!.HouseholdName,
+                State.UserEmail ?? "A family member",
+                Humanize(role),
+                JoinLink(invitation.Token));
+            await Email.SendAsync(email, subject, html);
+
+            inviteEmail = string.Empty;
+            inviteRole = PlanRole.Adult;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task Revoke(int id) => await State.RevokeInvitationAsync(id);
+    private async Task RemoveMember(string userId) => await State.RemoveMemberAsync(userId);
+
+    private static string Humanize(PlanRole r) => r switch
+    {
+        PlanRole.Owner => "Owner",
+        PlanRole.Adult => "Adult",
+        PlanRole.Child => "Child",
+        _ => r.ToString()
+    };
+}

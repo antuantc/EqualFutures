@@ -3,8 +3,9 @@ using System.ComponentModel.DataAnnotations;
 namespace EqualFutures.Domain;
 
 /// <summary>
-/// Aggregate root for a single household's plan. Owned by an Identity user
-/// (<see cref="OwnerId"/>) so each signed-in user sees only their own family.
+/// Aggregate root for a single household's plan. Created by an Identity user
+/// (<see cref="OwnerId"/>) and shared with other logins via <see cref="Members"/>
+/// (spouses, children) so a whole family can collaborate on one plan.
 /// </summary>
 public class FinancialPlan
 {
@@ -29,4 +30,10 @@ public class FinancialPlan
     public List<Child> Children { get; set; } = new();
     public List<Account> Accounts { get; set; } = new();
     public List<Liability> Liabilities { get; set; } = new();
+
+    /// <summary>All logins with access to this plan (owner, spouse, children).</summary>
+    public List<PlanMember> Members { get; set; } = new();
+
+    /// <summary>Outstanding and historical invitations to join this plan.</summary>
+    public List<PlanInvitation> Invitations { get; set; } = new();
 }
