@@ -81,6 +81,7 @@ public static class SamplePlanFactory
         plan.Accounts.Add(new Account { Name = "HSA", Type = AccountType.Hsa, Category = AccountCategory.Investment, TaxTreatment = TaxTreatment.TaxFree, CurrentBalance = 22_000m, AnnualContribution = 3_500m });
         plan.Accounts.Add(new Account { Name = "529 - Maya", Type = AccountType.FiveTwoNine, Category = AccountCategory.Education, TaxTreatment = TaxTreatment.TaxFree, CurrentBalance = 34_000m, AnnualContribution = 4_800m });
         plan.Accounts.Add(new Account { Name = "529 - Leo", Type = AccountType.FiveTwoNine, Category = AccountCategory.Education, TaxTreatment = TaxTreatment.TaxFree, CurrentBalance = 18_000m, AnnualContribution = 4_800m });
+        plan.Accounts.Add(new Account { Name = "Trump Account - Leo", Type = AccountType.TrumpAccount, Category = AccountCategory.Education, TaxTreatment = TaxTreatment.TaxFree, CurrentBalance = 1_000m, AnnualContribution = 2_500m });
         plan.Accounts.Add(new Account { Name = "Checking & Savings", Type = AccountType.BankAccount, Category = AccountCategory.Other, TaxTreatment = TaxTreatment.Taxable, CurrentBalance = 40_000m, AnnualContribution = 0m });
         plan.Accounts.Add(new Account
         {

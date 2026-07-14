@@ -21,7 +21,7 @@
         <table class="ef-table">
             <tbody>
                 <tr><td>Investment</td><td>Counts toward retirement readiness and the nest egg projection.</td></tr>
-                <tr><td>Education</td><td>Counts toward each child's education funding projection.</td></tr>
+                <tr><td>Education</td><td>Counts toward each child's education funding projection. Trump Accounts belong here — see Account types below.</td></tr>
                 <tr><td>Real Estate</td><td>Appreciates and (for rentals) contributes income; equity is informational, excluded from retirement readiness.</td></tr>
                 <tr><td>Other</td><td>Tracked for net worth only (e.g. cash) — excluded from every projection.</td></tr>
             </tbody>
@@ -31,10 +31,11 @@
     <div class="ef-card">
         <h2>Account types (AccountType)</h2>
         <table class="ef-table">
+            <thead><tr><th>Type</th><th>Details</th></tr></thead>
             <tbody>
                 @foreach (var t in Enum.GetValues<AccountType>())
                 {
-                    <tr><td>@Humanize(t)</td></tr>
+                    <tr><td>@Humanize(t)</td><td style="color:var(--ef-muted);font-size:.85rem">@Describe(t)</td></tr>
                 }
             </tbody>
         </table>
@@ -100,7 +101,18 @@
         AccountType.BankAccount => "Bank account",
         AccountType.RealEstate => "Real estate",
         AccountType.Business => "Business",
+        AccountType.TrumpAccount => "Trump Account",
         _ => t.ToString()
+    };
+
+    private static string Describe(AccountType t) => t switch
+    {
+        AccountType.TrumpAccount =>
+            "Child savings account created by the 2025 One Big Beautiful Bill Act. Government-seeded for eligible births; " +
+            "up to $5,000/yr (indexed) from family or employers; invested in a US equity index fund; locked until age 18. " +
+            "Qualified withdrawals (education, a first home, or a small business) are taxed at long-term capital gains " +
+            "rates rather than as ordinary income. Model under the Education category, earmarked to the child.",
+        _ => ""
     };
 
     private static string Humanize(LiabilityType t) => t switch

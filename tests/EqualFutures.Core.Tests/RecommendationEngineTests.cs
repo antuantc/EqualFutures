@@ -127,4 +127,64 @@ public class RecommendationEngineTests
 
         Assert.DoesNotContain(recs, r => r.Title.Contains("ahead of target"));
     }
+
+    [Fact]
+    public void Generate_ShortfallWithinContributionRoom_RecommendsSimpleIncrease()
+    {
+        var plan = new FinancialPlan
+        {
+            Parents = { new Parent { Id = 1, BirthDate = DateOnly.FromDateTime(DateTime.UtcNow.AddYears(-40)) } },
+            Accounts =
+            {
+                // Plenty of unused 401(k)/IRA/HSA room relative to the small requested top-up below.
+                new Account { Name = "401k", Type = AccountType.FourZeroOneK, Category = AccountCategory.Investment, OwnerParentId = 1, AnnualContribution = 0m }
+            }
+        };
+        // Small shortfall -> modest extraAnnual, comfortably under the 401(k) limit.
+        var shortfallRetirement = new RetirementProjection { FundingGap = -10_000m, RequiredNestEgg = 1_000_000m, YearsToRetirement = 20 };
+
+        var recs = _engine.Generate(plan, shortfallRetirement, Array.Empty<EducationProjection>(), NeutralFairness);
+
+        var rec = Assert.Single(recs, r => r.Title == "Increase retirement savings");
+        Assert.DoesNotContain("brokerage", rec.Detail, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Generate_ShortfallExceedsContributionRoom_RecommendsBrokerageSplit()
+    {
+        var plan = new FinancialPlan
+        {
+            Parents = { new Parent { Id = 1, BirthDate = DateOnly.FromDateTime(DateTime.UtcNow.AddYears(-40)) } },
+            Accounts =
+            {
+                // 401(k) already maxed out -> zero headroom, forcing the full top-up to a brokerage.
+                new Account { Name = "401k", Type = AccountType.FourZeroOneK, Category = AccountCategory.Investment, OwnerParentId = 1, AnnualContribution = 23_500m }
+            }
+        };
+        // Huge shortfall over a short horizon -> extraAnnual far exceeds any plausible contribution room.
+        var shortfallRetirement = new RetirementProjection { FundingGap = -2_000_000m, RequiredNestEgg = 3_000_000m, YearsToRetirement = 5 };
+
+        var recs = _engine.Generate(plan, shortfallRetirement, Array.Empty<EducationProjection>(), NeutralFairness);
+
+        var rec = Assert.Single(recs, r => r.Title == "Increase retirement savings");
+        Assert.Contains("brokerage", rec.Detail, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Generate_LargeEducationGift_NotesGiftTaxExclusion()
+    {
+        var plan = new FinancialPlan
+        {
+            Children = { new Child { Id = 1, Name = "Maya" } }
+        };
+        var education = new[]
+        {
+            new EducationProjection { ChildId = 1, ChildName = "Maya", FundingGap = 50_000m, DesiredFamilyContribution = 100_000m, ProjectedEducationSavings = 50_000m, YearsUntilCollege = 1 }
+        };
+
+        var recs = _engine.Generate(plan, OnTrackRetirement, education, NeutralFairness);
+
+        var rec = Assert.Single(recs, r => r.Title.Contains("Maya"));
+        Assert.Contains("gift-tax", rec.Reasoning, StringComparison.OrdinalIgnoreCase);
+    }
 }

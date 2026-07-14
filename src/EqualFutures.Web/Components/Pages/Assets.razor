@@ -51,7 +51,7 @@ else
                         </td>
                         <td data-label="Group">
                             <select class="form-select form-select-sm" @bind="a.Category">
-                                @foreach (var g in Enum.GetValues<AccountCategory>())
+                                @foreach (var g in GroupDisplayOrder)
                                 {
                                     <option value="@g">@Humanize(g)</option>
                                 }
@@ -220,6 +220,16 @@ else
     private static bool CanAssignToParent(Account account) =>
         account.Category == AccountCategory.Investment;
 
+    // Explicit display order so "Other" (the catch-all) always sorts last,
+    // regardless of the enum's underlying declaration order.
+    private static readonly AccountCategory[] GroupDisplayOrder =
+    [
+        AccountCategory.Investment,
+        AccountCategory.Education,
+        AccountCategory.RealEstate,
+        AccountCategory.Other
+    ];
+
     private static string Humanize(AccountCategory c) => c switch
     {
         AccountCategory.RealEstate => "Real Estate",
@@ -239,6 +249,7 @@ else
         AccountType.BankAccount => "Bank account",
         AccountType.RealEstate => "Real estate",
         AccountType.Business => "Business",
+        AccountType.TrumpAccount => "Trump Account",
         _ => t.ToString()
     };
 

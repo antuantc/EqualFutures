@@ -30,7 +30,20 @@ public enum AccountType
     // Other assets
     BankAccount,
     RealEstate,
-    Business
+    Business,
+
+    /// <summary>
+    /// "Trump Account" — the tax-advantaged child savings account created by the 2025
+    /// One Big Beautiful Bill Act. Seeded by the government for eligible births, funded
+    /// by up to $5,000/yr (indexed) from family or employers, invested in a diversified
+    /// US equity index fund, and locked until the child turns 18. Qualified withdrawals
+    /// (education, a first home, or starting a small business) are taxed at the more
+    /// favorable long-term capital gains rate rather than as ordinary income; after 18 it
+    /// functions much like a Traditional IRA for the child. Best modelled under the
+    /// Education category and earmarked to the child via BeneficiaryChildId, since it can
+    /// fund education (and this app doesn't otherwise model a child's own retirement).
+    /// </summary>
+    TrumpAccount
 }
 
 /// <summary>Tax treatment of an account, used by fairness and retirement calculations.</summary>

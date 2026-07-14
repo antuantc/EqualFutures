@@ -146,6 +146,10 @@ body {
 .ef-table td.num, .ef-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .ef-table input, .ef-table select { min-width: 8.5rem; }
 
+/* Zebra-stripe read-only tables for easier scanning. Excluded from .ef-table-cards
+   since those rows already render as individually-bordered white cards on mobile. */
+.ef-table:not(.ef-table-cards) tbody tr:nth-child(even) { background: var(--ef-bg); }
+
 /* Lets wide tables (many editable columns) scroll horizontally within their card
    instead of squeezing every input down to an unreadable width. */
 .ef-table-scroll { overflow-x: auto; }
