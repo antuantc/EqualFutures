@@ -65,7 +65,11 @@ else
     {
         totalUsers = await UserManager.Users.CountAsync();
         unconfirmedUsers = await UserManager.Users.CountAsync(u => !u.EmailConfirmed);
-        lockedOutUsers = await UserManager.Users.CountAsync(u => u.LockoutEnd != null && u.LockoutEnd > DateTimeOffset.UtcNow);
+
+        // SQLite's EF provider can't translate DateTimeOffset comparisons server-side,
+        // so pull just the lockout end values and compare in memory.
+        var lockoutEnds = await UserManager.Users.Select(u => u.LockoutEnd).ToListAsync();
+        lockedOutUsers = lockoutEnds.Count(le => le != null && le > DateTimeOffset.UtcNow);
 
         var since = DateTime.UtcNow.AddHours(-24);
         recentLogCount = await Db.AppLogEntries.CountAsync(l => l.TimestampUtc >= since);
