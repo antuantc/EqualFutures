@@ -60,51 +60,68 @@ public class FairnessEngine : IFairnessEngine
         decimal inflation = plan.Assumptions.InflationRate;
         decimal presentValueOfContribution =
             FinancialMath.PresentValue(p.DesiredFamilyContribution, inflation, p.YearsUntilCollege);
+        decimal assignedAccountValue = AssignedAccountValue(plan, p.ChildId);
+        decimal assignedAfterTaxAccountValue = AssignedAfterTaxAccountValue(plan, p.ChildId);
 
         return metric switch
         {
-            FairnessMetric.EqualDollarAmount => p.DesiredFamilyContribution,
+            FairnessMetric.EqualDollarAmount => p.DesiredFamilyContribution + assignedAccountValue,
 
-            FairnessMetric.EqualInflationAdjustedValue => presentValueOfContribution,
+            FairnessMetric.EqualInflationAdjustedValue => presentValueOfContribution + assignedAccountValue,
 
             FairnessMetric.EqualPercentOfTuition => p.TotalCostFutureDollars > 0m
-                ? p.DesiredFamilyContribution / p.TotalCostFutureDollars
+                ? (p.DesiredFamilyContribution + assignedAccountValue) / p.TotalCostFutureDollars
                 : 0m,
 
             // Cumulative real value of everything gifted toward the child.
-            FairnessMetric.EqualLifetimeGifts => presentValueOfContribution,
+            FairnessMetric.EqualLifetimeGifts => presentValueOfContribution + assignedAccountValue,
 
             // Real value adjusted for the tax efficiency of the funding accounts.
             FairnessMetric.EqualAfterTaxBenefit =>
-                presentValueOfContribution * TaxEfficiencyFactor(plan, p.ChildId),
+                (presentValueOfContribution * TaxEfficiencyFactor(plan, p.ChildId)) + assignedAfterTaxAccountValue,
 
             _ => p.DesiredFamilyContribution
         };
     }
 
+    private static decimal AssignedAccountValue(FinancialPlan plan, int childId) =>
+        AssignedAccounts(plan, childId).Sum(a => a.CurrentBalance);
+
+    private static decimal AssignedAfterTaxAccountValue(FinancialPlan plan, int childId) =>
+        AssignedAccounts(plan, childId).Sum(a => a.CurrentBalance * TaxFactor(a.TaxTreatment));
+
+    private static List<Account> AssignedAccounts(FinancialPlan plan, int childId) =>
+        plan.Accounts
+            .Where(a => a.BeneficiaryChildId == childId && IsChildFairnessAccount(a))
+            .ToList();
+
+    private static bool IsChildFairnessAccount(Account account) =>
+        account.Category is AccountCategory.Education or AccountCategory.Investment;
+
     /// <summary>
-    /// Weighted tax efficiency of the accounts earmarked to a child: tax-free vehicles
-    /// (529) deliver full value, taxable vehicles less. Defaults to 1.0 when unknown.
+    /// Weighted tax efficiency of the education and retirement accounts earmarked
+    /// to a child. Tax-free vehicles deliver full value, taxable vehicles less.
+    /// Defaults to 1.0 when unknown.
     /// </summary>
     private static decimal TaxEfficiencyFactor(FinancialPlan plan, int childId)
     {
-        var accounts = plan.Accounts
-            .Where(a => a.Category == AccountCategory.Education && a.BeneficiaryChildId == childId)
-            .ToList();
+        var accounts = AssignedAccounts(plan, childId);
         if (accounts.Count == 0) return 1.0m;
 
         decimal weightedTotal = accounts.Sum(a => a.CurrentBalance);
         if (weightedTotal <= 0m) return 1.0m;
 
-        decimal factor = accounts.Sum(a => a.CurrentBalance * a.TaxTreatment switch
-        {
-            TaxTreatment.TaxFree => 1.00m,
-            TaxTreatment.TaxDeferred => 0.90m,
-            TaxTreatment.Taxable => 0.85m,
-            _ => 1.00m
-        });
+        decimal factor = accounts.Sum(a => a.CurrentBalance * TaxFactor(a.TaxTreatment));
         return factor / weightedTotal;
     }
+
+    private static decimal TaxFactor(TaxTreatment treatment) => treatment switch
+    {
+        TaxTreatment.TaxFree => 1.00m,
+        TaxTreatment.TaxDeferred => 0.90m,
+        TaxTreatment.Taxable => 0.85m,
+        _ => 1.00m
+    };
 
     private static decimal ComputeScore(IReadOnlyList<decimal> values, decimal mean)
     {

@@ -53,6 +53,37 @@ public class FairnessEngineTests
     }
 
     [Fact]
+    public void ChildAssignedRetirementAccounts_CountTowardDollarFairness()
+    {
+        var plan = new FinancialPlan();
+        plan.Accounts.Add(new Account
+        {
+            Name = "A custodial Roth IRA",
+            Category = AccountCategory.Investment,
+            BeneficiaryChildId = 1,
+            CurrentBalance = 15_000m
+        });
+        plan.Accounts.Add(new Account
+        {
+            Name = "Unassigned 401(k)",
+            Category = AccountCategory.Investment,
+            CurrentBalance = 500_000m
+        });
+        var projections = new[]
+        {
+            Projection(1, "A", 50_000m, 60_000m),
+            Projection(2, "B", 50_000m, 60_000m)
+        };
+
+        var result = _engine.Evaluate(plan, projections, FairnessMetric.EqualDollarAmount);
+
+        Assert.Equal(65_000m, result.Children.Single(c => c.ChildName == "A").Value);
+        Assert.Equal(50_000m, result.Children.Single(c => c.ChildName == "B").Value);
+        Assert.Equal(57_500m, result.EqualTarget);
+        Assert.False(result.IsBalanced);
+    }
+
+    [Fact]
     public void PercentOfTuition_UsesRatios()
     {
         var plan = new FinancialPlan();

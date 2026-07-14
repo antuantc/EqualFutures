@@ -19,8 +19,8 @@ public interface IPlanService
     /// <summary>Removes all people, accounts, and liabilities from the plan. Requires edit rights.</summary>
     Task<FinancialPlan> ClearDataAsync(string userId, string? userEmail = null, CancellationToken ct = default);
 
-    /// <summary>Persists changes to an existing plan.</summary>
-    Task SaveAsync(FinancialPlan plan, CancellationToken ct = default);
+    /// <summary>Persists changes to an existing plan. Requires edit rights.</summary>
+    Task SaveAsync(FinancialPlan plan, string userId, CancellationToken ct = default);
 }
 
 public class PlanService(FinancialDbContext db) : IPlanService
@@ -96,9 +96,12 @@ public class PlanService(FinancialDbContext db) : IPlanService
         return plan;
     }
 
-    public async Task SaveAsync(FinancialPlan plan, CancellationToken ct = default)
+    public async Task SaveAsync(FinancialPlan plan, string userId, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(plan);
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
+        RequireEdit(plan, userId);
+
         plan.UpdatedUtc = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
     }

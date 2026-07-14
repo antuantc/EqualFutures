@@ -38,13 +38,14 @@ The guiding principle: **retirement comes first, because you cannot borrow for i
 | Module | What it does |
 |--------|--------------|
 | **Dashboard** | High-level snapshot: retirement readiness, education funding, net worth, investment allocation, cash flow, and explained recommendations. |
-| **Family Profile** | Edit parents (ages, retirement age, income, retirement spending, Social Security, pension) and children (birth date, college start year, college type, funding target, scholarships). |
-| **Assets & Liabilities** | Track investment accounts (401(k), IRA, Roth, Brokerage, HSA), education accounts (529, UTMA/UGMA, trust), other assets (bank, real estate, business), and debts (mortgage, student loan, other). |
+| **Family Profile** | Edit parents (ages, retirement age, income, retirement spending, Social Security, pension) and children (birth date, college start year, college type, funding target, scholarships, and retirement group count). |
+| **Assets & Liabilities** | Track investment accounts (401(k), IRA, Roth, Brokerage, HSA), education accounts (529, UTMA/UGMA, trust), other assets (bank, real estate, business), and debts (mortgage, student loan, other). Education and retirement/investment accounts can be assigned to a specific child for fairness analysis. |
 | **Retirement Planning** | Projections, safe-withdrawal estimates, portfolio growth, inflation adjustment, and the retirement funding gap — with **interactive assumption sliders** that recompute instantly. |
 | **Education Planning** | Per-child inflation-adjusted college cost, projected 529/savings, scholarships, family contribution, student responsibility, and remaining funding gap. |
-| **Fairness Engine** | The differentiator — compares how much support each child receives across **all** sources under five selectable fairness metrics, making intentional-versus-accidental inequality visible. |
+| **Fairness Engine** | The differentiator — compares how much support each child receives across education targets plus child-assigned education and retirement accounts under five selectable fairness metrics, making intentional-versus-accidental inequality visible. |
 | **Recommendations** | Actionable, *explained* insights (increase savings, close a 529 gap, pay down high-rate debt, Roth-conversion opportunities), prioritizing retirement first. |
 | **Family collaboration** | Invite a spouse or children to their own logins on the shared plan, with roles (Owner / Adult / Child) controlling edit and management rights. |
+| **Responsive UI** | Mobile-friendly navigation, stacked edit cards for family/account entry, readable tables, and full-width mobile actions for common workflows. |
 
 Each household is private to the signed-in user. New accounts start empty; a **sample household ("The Rivera Family")** can be loaded on demand from the Dashboard or Family Profile and cleared at any time. A plan can be **shared with other logins** (spouse, children) via invitations — see [Family collaboration](#family-collaboration).
 
@@ -165,7 +166,7 @@ The suite covers the core financial math and each calculation service:
 - `FinancialMathTests` — future/present value, annuities, compounding, edge cases
 - `RetirementCalculatorTests` — nest-egg projection, funding gap, guaranteed-income offset, shortfall detection
 - `EducationCalculatorTests` — default costs, funding gaps, scholarships, earmarked savings
-- `FairnessEngineTests` — equal vs. unequal distribution scoring, ratio metrics, single-child case
+- `FairnessEngineTests` — equal vs. unequal distribution scoring, ratio metrics, child-assigned retirement account fairness, single-child case
 
 ---
 
@@ -214,6 +215,14 @@ Assumptions (inflation, expected returns, safe-withdrawal rate, planning horizon
 ## The Fairness Engine
 
 The Fairness Engine reduces each child to a single comparable value under a chosen lens, then measures how far the household is from treating every child identically. Deliberately unequal choices remain visible via per-child deviations rather than being hidden.
+
+Fairness values include:
+
+- The planned family education contribution for each child.
+- Education accounts assigned to the child, such as 529 plans, UTMA/UGMA accounts, or education trusts.
+- Retirement/investment accounts assigned to the child, such as a custodial Roth IRA or other child-specific investment account.
+
+Unassigned household retirement accounts remain part of retirement planning, but are not treated as a gift to any one child.
 
 Supported metrics:
 
@@ -313,9 +322,26 @@ If Azure shows **HTTP Error 500.30 - ASP.NET Core app failed to start**, check A
 
 ## Security notes
 
-- The transitive `SQLitePCLRaw.lib.e_sqlite3` dependency is pinned to the patched `SQLitePCLRaw.bundle_e_sqlite3` **3.0.3** to resolve advisory GHSA-2m69-gcr7-jv3q.
-- Each plan is scoped to the owning Identity user; the app always resolves the household from the authenticated user's id and never from a client-supplied plan id, so users only ever see their own data (no IDOR).
-- Email confirmation is **required** before login. Email is delivered through an Azure Logic App whose trigger URL is a secret kept in user-secrets/environment (`Email:LogicAppUrl`), never committed. User-supplied values in emails are HTML-encoded, and the Logic App URL is never logged.
+This repo has been reviewed against the OWASP Top 10 risk areas for its current Blazor Server + SQLite architecture. The current controls are:
+
+- **Access control:** pages require authentication; the current household is resolved from the authenticated Identity user, never from a client-supplied plan id. Family membership roles gate edit/manage permissions, and persistence methods re-check edit rights before saving.
+- **Authentication:** email confirmation is required before login. Passwords require at least 12 characters, failed password sign-ins count toward Identity lockout, and new users are lockout-enabled.
+- **Session and transport protection:** production uses HTTPS redirection and HSTS. ASP.NET Core Identity manages secure auth cookies.
+- **CSRF protection:** antiforgery middleware is enabled for form posts and Blazor/Identity endpoints.
+- **XSS protection:** Razor encodes UI output by default; user-supplied values used in transactional emails are HTML-encoded. The app does not use `MarkupString`, raw SQL HTML rendering, or client-side `innerHTML` patterns.
+- **Injection protection:** data access uses EF Core LINQ queries, not hand-built SQL. A targeted scan found no `FromSql`, `ExecuteSql`, or SQL raw string usage in app code.
+- **Secrets:** committed config contains no live secrets. The Azure Logic App trigger URL contains a SAS signature and must live in user-secrets or environment settings (`Email:LogicAppUrl`). The sender intentionally avoids logging that URL.
+- **Supply chain:** `dotnet list EqualFutures.slnx package --vulnerable --include-transitive` currently reports no vulnerable direct or transitive packages. `SQLitePCLRaw.bundle_e_sqlite3` is pinned to **3.0.3** to stay on the patched line for GHSA-2m69-gcr7-jv3q.
+- **Security headers:** responses include `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, and a restrictive `Permissions-Policy` for camera, microphone, and geolocation.
+- **Local data hygiene:** `.gitignore` excludes SQLite database files (`*.db`, `*.db-shm`, `*.db-wal`), `.env`, logs, and build outputs.
+
+Security verification commands:
+
+```powershell
+dotnet list .\EqualFutures.slnx package --vulnerable --include-transitive
+dotnet test .\tests\EqualFutures.Core.Tests\EqualFutures.Core.Tests.csproj --no-restore
+dotnet build .\EqualFutures.slnx
+```
 
 ---
 

@@ -3,8 +3,8 @@ using System.ComponentModel.DataAnnotations;
 namespace EqualFutures.Domain;
 
 /// <summary>
-/// Any account holding value: retirement, education, or other assets. Education
-/// accounts may be earmarked to a specific child via <see cref="BeneficiaryChildId"/>.
+/// Any account holding value: retirement, education, or other assets. Accounts
+/// may be earmarked to a specific child via <see cref="BeneficiaryChildId"/>.
 /// </summary>
 public class Account
 {
@@ -32,6 +32,6 @@ public class Account
     /// </summary>
     public decimal? ExpectedReturnOverride { get; set; }
 
-    /// <summary>For education accounts, the child this balance is earmarked for.</summary>
+    /// <summary>For child-specific education or retirement accounts, the child this balance is earmarked for.</summary>
     public int? BeneficiaryChildId { get; set; }
 }

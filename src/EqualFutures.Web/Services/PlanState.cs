@@ -83,7 +83,7 @@ public class PlanState(
     public async Task SaveAsync(CancellationToken ct = default)
     {
         if (Plan is null || !CanEdit) return;
-        await planService.SaveAsync(Plan, ct);
+        await planService.SaveAsync(Plan, UserId!, ct);
         Recompute();
     }
 

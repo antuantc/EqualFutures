@@ -58,7 +58,7 @@ else
         <h2>Parents</h2>
         @foreach (var p in plan.Parents)
         {
-            <div class="ef-grid ef-grid-4" style="margin-bottom:1rem;align-items:end">
+            <div class="ef-grid ef-grid-4 ef-edit-row">
                 <div class="ef-field"><label>Name</label><input class="form-control" @bind="p.Name" /></div>
                 <div class="ef-field"><label>Current age</label><input type="number" class="form-control" @bind="p.CurrentAge" /></div>
                 <div class="ef-field"><label>Retirement age</label><input type="number" class="form-control" @bind="p.PlannedRetirementAge" /></div>
@@ -78,11 +78,20 @@ else
         <h2>Children</h2>
         @foreach (var c in plan.Children)
         {
-            <div class="ef-grid ef-grid-4" style="margin-bottom:1rem;align-items:end">
+            <div class="ef-grid ef-grid-4 ef-edit-row">
                 <div class="ef-field"><label>Name</label><input class="form-control" @bind="c.Name" /></div>
                 <div class="ef-field"><label>Birth date</label><input type="date" class="form-control" @bind="c.BirthDate" /></div>
                 <div class="ef-field"><label>College start year</label><input type="number" class="form-control" @bind="c.ExpectedCollegeStartYear" /></div>
                 <div class="ef-field"><label>Years of college</label><input type="number" class="form-control" @bind="c.YearsOfCollege" /></div>
+                <div class="ef-field">
+                    <label>Retirement group count</label>
+                    <select class="form-select" @bind="c.RetirementGroupCount">
+                        @for (var count = 0; count <= 10; count++)
+                        {
+                            <option value="@count">@count</option>
+                        }
+                    </select>
+                </div>
                 <div class="ef-field">
                     <label>College type</label>
                     <select class="form-select" @bind="c.CollegeType">
@@ -147,6 +156,7 @@ else
             BirthDate = new DateOnly(year - 5, 1, 1),
             ExpectedCollegeStartYear = year + 13,
             YearsOfCollege = 4,
+            RetirementGroupCount = 0,
             DesiredFundingPercent = 1.0m
         });
     }
