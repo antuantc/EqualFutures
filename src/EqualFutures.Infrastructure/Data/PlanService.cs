@@ -58,6 +58,35 @@ public class PlanService(FinancialDbContext db, IAppSettingsService appSettings)
             }
         }
 
+        // A user who registered directly (rather than clicking the join link) may
+        // still have a pending invitation waiting for their email — link it now
+        // instead of giving them a disconnected, brand-new household.
+        if (planId is null && !string.IsNullOrWhiteSpace(userEmail))
+        {
+            var normalizedEmail = userEmail.Trim().ToLowerInvariant();
+            var invitation = await db.PlanInvitations
+                .Where(i => i.Email == normalizedEmail && i.Status == InvitationStatus.Pending)
+                .OrderByDescending(i => i.CreatedUtc)
+                .FirstOrDefaultAsync(ct);
+
+            if (invitation is not null && invitation.IsPending(DateTime.UtcNow))
+            {
+                db.PlanMembers.Add(new PlanMember
+                {
+                    FinancialPlanId = invitation.FinancialPlanId,
+                    UserId = userId,
+                    Email = normalizedEmail,
+                    Role = invitation.Role,
+                    JoinedUtc = DateTime.UtcNow
+                });
+                invitation.Status = InvitationStatus.Accepted;
+                invitation.AcceptedByUserId = userId;
+                invitation.AcceptedUtc = DateTime.UtcNow;
+                await db.SaveChangesAsync(ct);
+                planId = invitation.FinancialPlanId;
+            }
+        }
+
         if (planId is not null)
             return await LoadByIdAsync(planId.Value, ct)
                    ?? throw new InvalidOperationException("Plan membership references a missing plan.");

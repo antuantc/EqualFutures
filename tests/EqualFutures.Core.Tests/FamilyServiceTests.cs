@@ -43,6 +43,36 @@ public class FamilyServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetOrCreate_NewUserWithPendingInvitation_JoinsInsteadOfCreatingNewPlan()
+    {
+        int invitedPlanId;
+        await using (var ctx = NewContext())
+        {
+            var plans = new PlanService(ctx, new AppSettingsService(ctx));
+            var family = new FamilyService(ctx);
+            var ownerPlan = await plans.GetOrCreateAsync("owner", "owner@example.com");
+            invitedPlanId = ownerPlan.Id;
+
+            await family.InviteAsync(invitedPlanId, "owner", "Spouse@Example.com", PlanRole.Adult);
+        }
+
+        // The invited person registers directly (never clicks the join link).
+        await using (var ctx = NewContext())
+        {
+            var plans = new PlanService(ctx, new AppSettingsService(ctx));
+            var spousePlan = await plans.GetOrCreateAsync("spouse", "spouse@example.com");
+
+            Assert.Equal(invitedPlanId, spousePlan.Id);
+            var member = Assert.Single(spousePlan.Members, m => m.UserId == "spouse");
+            Assert.Equal(PlanRole.Adult, member.Role);
+
+            var invitation = Assert.Single(spousePlan.Invitations);
+            Assert.Equal(InvitationStatus.Accepted, invitation.Status);
+            Assert.Equal("spouse", invitation.AcceptedByUserId);
+        }
+    }
+
+    [Fact]
     public async Task Invite_ThenAccept_SharesTheSamePlan()
     {
         int planId;
