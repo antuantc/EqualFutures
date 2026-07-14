@@ -1,0 +1,140 @@
+@page "/admin/users"
+@attribute [Authorize(Roles = "Admin")]
+@rendermode InteractiveServer
+@using System.Text
+@using System.Text.Encodings.Web
+@using EqualFutures.Web.Data
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.WebUtilities
+@using Microsoft.EntityFrameworkCore
+@inject UserManager<ApplicationUser> UserManager
+@inject IEmailSender<ApplicationUser> EmailSender
+@inject NavigationManager NavigationManager
+
+<PageTitle>Users · Admin · EqualFutures</PageTitle>
+
+<div class="ef-page-header">
+    <h1>Users</h1>
+    <p>Account and registration status only — no household financial data is shown here.</p>
+</div>
+
+@if (users is null)
+{
+    <p>Loading…</p>
+}
+else
+{
+    @if (!string.IsNullOrEmpty(statusMessage))
+    {
+        <div class="ef-rec info" style="margin-bottom:1rem">
+            <div class="rec-detail">@statusMessage</div>
+        </div>
+    }
+
+    <div class="ef-card">
+        <div class="ef-table-scroll">
+        <table class="ef-table">
+            <thead>
+                <tr>
+                    <th>Email</th><th>Created (UTC)</th><th>Confirmed</th><th>Lockout</th><th class="num">Failed logins</th><th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var u in users)
+                {
+                    bool lockedOut = u.LockoutEnd is not null && u.LockoutEnd > DateTimeOffset.UtcNow;
+                    <tr>
+                        <td>@u.Email</td>
+                        <td>@u.CreatedUtc.ToString("yyyy-MM-dd HH:mm")</td>
+                        <td>
+                            @if (u.EmailConfirmed)
+                            {
+                                <span class="ef-pill good">Confirmed</span>
+                            }
+                            else
+                            {
+                                <span class="ef-pill warn">Unconfirmed</span>
+                            }
+                        </td>
+                        <td>
+                            @if (lockedOut)
+                            {
+                                <span class="ef-pill bad">Until @u.LockoutEnd!.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</span>
+                            }
+                            else
+                            {
+                                <span style="color:var(--ef-muted)">—</span>
+                            }
+                        </td>
+                        <td class="num">@u.AccessFailedCount</td>
+                        <td>
+                            <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+                                @if (!u.EmailConfirmed)
+                                {
+                                    <button class="btn btn-sm btn-outline-secondary" disabled="@busy" @onclick="() => ResendConfirmationAsync(u)">Resend confirmation</button>
+                                    <button class="btn btn-sm btn-outline-secondary" disabled="@busy" @onclick="() => ConfirmNowAsync(u)">Confirm now</button>
+                                }
+                                @if (lockedOut)
+                                {
+                                    <button class="btn btn-sm btn-outline-secondary" disabled="@busy" @onclick="() => UnlockAsync(u)">Unlock</button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        </div>
+    </div>
+}
+
+@code {
+    private List<ApplicationUser>? users;
+    private bool busy;
+    private string? statusMessage;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        users = await UserManager.Users.OrderByDescending(u => u.CreatedUtc).Take(500).ToListAsync();
+    }
+
+    private async Task ResendConfirmationAsync(ApplicationUser user)
+    {
+        busy = true;
+        var userId = await UserManager.GetUserIdAsync(user);
+        var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
+        code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+        var callbackUrl = NavigationManager.GetUriWithQueryParameters(
+            NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
+            new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code });
+
+        await EmailSender.SendConfirmationLinkAsync(user, user.Email!, HtmlEncoder.Default.Encode(callbackUrl));
+
+        statusMessage = $"Confirmation email resent to {user.Email}.";
+        busy = false;
+    }
+
+    private async Task ConfirmNowAsync(ApplicationUser user)
+    {
+        busy = true;
+        var token = await UserManager.GenerateEmailConfirmationTokenAsync(user);
+        var result = await UserManager.ConfirmEmailAsync(user, token);
+        statusMessage = result.Succeeded
+            ? $"{user.Email} manually confirmed."
+            : $"Could not confirm {user.Email}: {string.Join(", ", result.Errors.Select(e => e.Description))}";
+        await LoadAsync();
+        busy = false;
+    }
+
+    private async Task UnlockAsync(ApplicationUser user)
+    {
+        busy = true;
+        await UserManager.SetLockoutEndDateAsync(user, null);
+        await UserManager.ResetAccessFailedCountAsync(user);
+        statusMessage = $"{user.Email} unlocked.";
+        await LoadAsync();
+        busy = false;
+    }
+}

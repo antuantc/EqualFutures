@@ -5,6 +5,7 @@
 @using System.Text.Encodings.Web
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.WebUtilities
+@using EqualFutures.Infrastructure.Data
 @using EqualFutures.Web.Data
 
 @inject UserManager<ApplicationUser> UserManager
@@ -14,11 +15,22 @@
 @inject ILogger<Register> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
+@inject IAppSettingsService AppSettingsService
 
 <PageTitle>Register</PageTitle>
 
 <h1>Register</h1>
 
+@if (!registrationsOpen)
+{
+    <div class="row">
+        <div class="col-lg-6">
+            <p>New registrations are currently closed. Please check back later.</p>
+        </div>
+    </div>
+}
+else
+{
 <div class="row">
     <div class="col-lg-6">
         <StatusMessage Message="@Message" />
@@ -53,6 +65,7 @@
         </section>
     </div>
 </div>
+}
 
 @code {
     private IEnumerable<IdentityError>? identityErrors;
@@ -65,13 +78,19 @@
 
     private string? Message => identityErrors is null ? null : $"Error: {string.Join(", ", identityErrors.Select(error => error.Description))}";
 
-    protected override void OnInitialized()
+    private bool registrationsOpen = true;
+
+    protected override async Task OnInitializedAsync()
     {
         Input ??= new();
+        var settings = await AppSettingsService.GetAsync();
+        registrationsOpen = settings.AllowNewRegistrations;
     }
 
     public async Task RegisterUser(EditContext editContext)
     {
+        if (!registrationsOpen) return;
+
         var user = CreateUser();
 
         await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);

@@ -17,6 +17,7 @@ public class FinancialDbContext(DbContextOptions<FinancialDbContext> options) : 
     public DbSet<Liability> Liabilities => Set<Liability>();
     public DbSet<PlanMember> PlanMembers => Set<PlanMember>();
     public DbSet<PlanInvitation> PlanInvitations => Set<PlanInvitation>();
+    public DbSet<AppSettings> AppSettings => Set<AppSettings>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {

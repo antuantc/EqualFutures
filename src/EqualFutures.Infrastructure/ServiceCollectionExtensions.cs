@@ -18,6 +18,7 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IPlanService, PlanService>();
         services.AddScoped<IFamilyService, FamilyService>();
+        services.AddScoped<IAppSettingsService, AppSettingsService>();
         return services;
     }
 }

@@ -5,4 +5,5 @@ namespace EqualFutures.Web.Data;
 
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : IdentityDbContext<ApplicationUser>(options)
 {
+    public DbSet<AppLogEntry> AppLogEntries => Set<AppLogEntry>();
 }

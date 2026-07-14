@@ -32,7 +32,7 @@ public class FamilyServiceTests : IDisposable
     public async Task GetOrCreate_NewUser_BecomesOwnerMember()
     {
         await using var ctx = NewContext();
-        var plans = new PlanService(ctx);
+        var plans = new PlanService(ctx, new AppSettingsService(ctx));
 
         var plan = await plans.GetOrCreateAsync("user-1", "owner@example.com");
 
@@ -48,7 +48,7 @@ public class FamilyServiceTests : IDisposable
         int planId;
         await using (var ctx = NewContext())
         {
-            var plans = new PlanService(ctx);
+            var plans = new PlanService(ctx, new AppSettingsService(ctx));
             var family = new FamilyService(ctx);
             var plan = await plans.GetOrCreateAsync("owner", "owner@example.com");
             planId = plan.Id;
@@ -63,7 +63,7 @@ public class FamilyServiceTests : IDisposable
         // A fresh context: the invited user resolves to the owner's plan, not a new one.
         await using (var ctx = NewContext())
         {
-            var plans = new PlanService(ctx);
+            var plans = new PlanService(ctx, new AppSettingsService(ctx));
             var spousePlan = await plans.GetOrCreateAsync("spouse", "spouse@example.com");
             Assert.Equal(planId, spousePlan.Id);
             Assert.Equal(PlanRole.Adult, spousePlan.Members.Single(m => m.UserId == "spouse").Role);
@@ -74,7 +74,7 @@ public class FamilyServiceTests : IDisposable
     public async Task Accept_WithWrongEmail_IsRejected()
     {
         await using var ctx = NewContext();
-        var plans = new PlanService(ctx);
+        var plans = new PlanService(ctx, new AppSettingsService(ctx));
         var family = new FamilyService(ctx);
         var plan = await plans.GetOrCreateAsync("owner", "owner@example.com");
 
@@ -100,7 +100,7 @@ public class FamilyServiceTests : IDisposable
     public async Task Invite_ByNonOwner_Throws()
     {
         await using var ctx = NewContext();
-        var plans = new PlanService(ctx);
+        var plans = new PlanService(ctx, new AppSettingsService(ctx));
         var family = new FamilyService(ctx);
         var plan = await plans.GetOrCreateAsync("owner", "owner@example.com");
 
@@ -116,7 +116,7 @@ public class FamilyServiceTests : IDisposable
     public async Task Child_CannotEditPlan()
     {
         await using var ctx = NewContext();
-        var plans = new PlanService(ctx);
+        var plans = new PlanService(ctx, new AppSettingsService(ctx));
         var family = new FamilyService(ctx);
         var plan = await plans.GetOrCreateAsync("owner", "owner@example.com");
 
@@ -131,7 +131,7 @@ public class FamilyServiceTests : IDisposable
     public async Task Accept_Twice_IsIdempotent()
     {
         await using var ctx = NewContext();
-        var plans = new PlanService(ctx);
+        var plans = new PlanService(ctx, new AppSettingsService(ctx));
         var family = new FamilyService(ctx);
         var plan = await plans.GetOrCreateAsync("owner", "owner@example.com");
 

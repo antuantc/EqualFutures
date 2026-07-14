@@ -1,0 +1,103 @@
+@page "/admin/logs"
+@attribute [Authorize(Roles = "Admin")]
+@rendermode InteractiveServer
+@using EqualFutures.Web.Data
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext Db
+
+<PageTitle>Logs · Admin · EqualFutures</PageTitle>
+
+<div class="ef-page-header">
+    <h1>Application Logs</h1>
+    <p>Warning-level and above entries captured across the app. Never contains household financial data.</p>
+</div>
+
+<div class="ef-card" style="margin-bottom:1rem">
+    <div class="ef-field" style="max-width:260px">
+        <label>Minimum level</label>
+        <select class="form-select" @bind="levelFilter" @bind:after="LoadAsync">
+            <option value="">All</option>
+            <option value="Warning">Warning</option>
+            <option value="Error">Error</option>
+            <option value="Critical">Critical</option>
+        </select>
+    </div>
+</div>
+
+@if (entries is null)
+{
+    <p>Loading…</p>
+}
+else if (entries.Count == 0)
+{
+    <div class="ef-card"><p>No log entries match this filter.</p></div>
+}
+else
+{
+    <div class="ef-card">
+        <div class="ef-actions" style="margin-top:0;margin-bottom:1rem">
+            @if (!confirmingClear)
+            {
+                <button class="btn btn-outline-danger" @onclick="() => confirmingClear = true">Clear all logs</button>
+            }
+            else
+            {
+                <span style="align-self:center">Delete every stored log entry?</span>
+                <button class="btn btn-danger" @onclick="ClearAsync">Yes, clear logs</button>
+                <button class="btn btn-outline-secondary" @onclick="() => confirmingClear = false">Cancel</button>
+            }
+        </div>
+        <div class="ef-table-scroll">
+        <table class="ef-table">
+            <thead>
+                <tr><th>Time (UTC)</th><th>Level</th><th>Category</th><th>Message</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var e in entries)
+                {
+                    <tr>
+                        <td style="white-space:nowrap">@e.TimestampUtc.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                        <td><span class="ef-pill @(e.Level is "Critical" or "Error" ? "bad" : "warn")">@e.Level</span></td>
+                        <td style="white-space:nowrap">@e.Category</td>
+                        <td>
+                            @e.Message
+                            @if (!string.IsNullOrEmpty(e.Exception))
+                            {
+                                <details style="margin-top:.25rem">
+                                    <summary style="cursor:pointer;color:var(--ef-muted);font-size:.82rem">Exception details</summary>
+                                    <pre style="white-space:pre-wrap;font-size:.78rem;margin:.4rem 0 0">@e.Exception</pre>
+                                </details>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        </div>
+    </div>
+}
+
+@code {
+    private List<AppLogEntry>? entries;
+    private string levelFilter = "";
+    private bool confirmingClear;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        var query = Db.AppLogEntries.AsQueryable();
+        if (!string.IsNullOrEmpty(levelFilter))
+        {
+            query = query.Where(l => l.Level == levelFilter);
+        }
+        entries = await query.OrderByDescending(l => l.TimestampUtc).Take(300).ToListAsync();
+    }
+
+    private async Task ClearAsync()
+    {
+        await Db.AppLogEntries.ExecuteDeleteAsync();
+        confirmingClear = false;
+        await LoadAsync();
+    }
+}

@@ -23,7 +23,7 @@ public interface IPlanService
     Task SaveAsync(FinancialPlan plan, string userId, CancellationToken ct = default);
 }
 
-public class PlanService(FinancialDbContext db) : IPlanService
+public class PlanService(FinancialDbContext db, IAppSettingsService appSettings) : IPlanService
 {
     public async Task<FinancialPlan> GetOrCreateAsync(string userId, string? userEmail = null, CancellationToken ct = default)
     {
@@ -63,7 +63,12 @@ public class PlanService(FinancialDbContext db) : IPlanService
                    ?? throw new InvalidOperationException("Plan membership references a missing plan.");
 
         // Brand-new user: create their own plan and make them the owner.
-        var plan = new FinancialPlan { OwnerId = userId, HouseholdName = "My Household" };
+        var plan = new FinancialPlan
+        {
+            OwnerId = userId,
+            HouseholdName = "My Household",
+            Assumptions = await appSettings.GetDefaultPlanAssumptionsAsync(ct)
+        };
         plan.Members.Add(new PlanMember { UserId = userId, Email = userEmail ?? string.Empty, Role = PlanRole.Owner });
         db.Plans.Add(plan);
         await db.SaveChangesAsync(ct);

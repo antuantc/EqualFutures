@@ -1,0 +1,75 @@
+@page "/admin"
+@attribute [Authorize(Roles = "Admin")]
+@rendermode InteractiveServer
+@using EqualFutures.Web.Data
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@inject UserManager<ApplicationUser> UserManager
+@inject ApplicationDbContext Db
+
+<PageTitle>Admin · EqualFutures</PageTitle>
+
+<div class="ef-page-header">
+    <h1>Admin</h1>
+    <p>Operational tools only — no household financial data is shown here.</p>
+</div>
+
+@if (loading)
+{
+    <p>Loading…</p>
+}
+else
+{
+    <div class="ef-grid ef-grid-4">
+        <StatCard Label="Total users" Value="@totalUsers.ToString()" />
+        <StatCard Label="Unconfirmed emails" Value="@unconfirmedUsers.ToString()"
+                  Pill="@(unconfirmedUsers > 0 ? "Needs attention" : null)" PillClass="warn" />
+        <StatCard Label="Locked-out accounts" Value="@lockedOutUsers.ToString()"
+                  Pill="@(lockedOutUsers > 0 ? "Needs attention" : null)" PillClass="warn" />
+        <StatCard Label="Warnings/errors (24h)" Value="@recentLogCount.ToString()"
+                  Pill="@(recentLogCount > 0 ? "Review" : "Clean")" PillClass="@(recentLogCount > 0 ? "warn" : "good")" />
+    </div>
+
+    <div class="ef-grid ef-grid-4" style="margin-top:1rem">
+        <div class="ef-card">
+            <h2>Registration issues</h2>
+            <p style="color:var(--ef-muted);font-size:.9rem">Resend confirmations, manually confirm, or unlock accounts.</p>
+            <a class="btn btn-outline-secondary" href="admin/users">Open Users</a>
+        </div>
+        <div class="ef-card">
+            <h2>Application logs</h2>
+            <p style="color:var(--ef-muted);font-size:.9rem">Review recent warnings and errors captured across the app.</p>
+            <a class="btn btn-outline-secondary" href="admin/logs">Open Logs</a>
+        </div>
+        <div class="ef-card">
+            <h2>Settings</h2>
+            <p style="color:var(--ef-muted);font-size:.9rem">Default plan assumptions and the new-registration toggle.</p>
+            <a class="btn btn-outline-secondary" href="admin/settings">Open Settings</a>
+        </div>
+        <div class="ef-card">
+            <h2>Types &amp; groups</h2>
+            <p style="color:var(--ef-muted);font-size:.9rem">Reference catalog of account, liability, and college types.</p>
+            <a class="btn btn-outline-secondary" href="admin/reference">Open Reference</a>
+        </div>
+    </div>
+}
+
+@code {
+    private bool loading = true;
+    private int totalUsers;
+    private int unconfirmedUsers;
+    private int lockedOutUsers;
+    private int recentLogCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        totalUsers = await UserManager.Users.CountAsync();
+        unconfirmedUsers = await UserManager.Users.CountAsync(u => !u.EmailConfirmed);
+        lockedOutUsers = await UserManager.Users.CountAsync(u => u.LockoutEnd != null && u.LockoutEnd > DateTimeOffset.UtcNow);
+
+        var since = DateTime.UtcNow.AddHours(-24);
+        recentLogCount = await Db.AppLogEntries.CountAsync(l => l.TimestampUtc >= since);
+
+        loading = false;
+    }
+}

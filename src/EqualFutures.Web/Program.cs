@@ -10,6 +10,7 @@ using EqualFutures.Web.Components.Account;
 using EqualFutures.Web.Data;
 using EqualFutures.Web.Services;
 using EqualFutures.Web.Services.Email;
+using EqualFutures.Web.Services.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -38,6 +39,9 @@ builder.Services.AddEqualFuturesCore();
 builder.Services.AddEqualFuturesInfrastructure(connectionString);
 builder.Services.AddScoped<PlanState>();
 
+// Surfaces Warning-and-above logs in the admin portal for diagnostics.
+builder.Services.AddSingleton<ILoggerProvider, DatabaseLoggerProvider>();
+
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
     {
         options.SignIn.RequireConfirmedAccount = true;
@@ -52,6 +56,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
         options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
         options.Lockout.AllowedForNewUsers = true;
     })
+    .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddSignInManager()
     .AddDefaultTokenProviders();
@@ -70,6 +75,7 @@ using (var scope = app.Services.CreateScope())
     var services = scope.ServiceProvider;
     await services.GetRequiredService<ApplicationDbContext>().Database.MigrateAsync();
     await services.GetRequiredService<FinancialDbContext>().Database.MigrateAsync();
+    await EnsureAdminRoleAsync(services, app.Configuration);
 }
 
 // Configure the HTTP request pipeline.
@@ -105,6 +111,37 @@ app.MapRazorComponents<App>()
 app.MapAdditionalIdentityEndpoints();
 
 app.Run();
+
+/// <summary>
+/// Ensures the "Admin" role exists and is granted to every email listed under the
+/// "Admin:Emails" configuration section. This is the only way to grant admin access —
+/// there's no in-app "make admin" button, by design.
+/// </summary>
+static async Task EnsureAdminRoleAsync(IServiceProvider services, IConfiguration configuration)
+{
+    const string adminRole = "Admin";
+
+    var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+    if (!await roleManager.RoleExistsAsync(adminRole))
+    {
+        await roleManager.CreateAsync(new IdentityRole(adminRole));
+    }
+
+    var adminEmails = configuration.GetSection("Admin:Emails").Get<string[]>() ?? [];
+    if (adminEmails.Length == 0) return;
+
+    var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
+    foreach (var email in adminEmails)
+    {
+        var user = await userManager.FindByEmailAsync(email);
+        if (user is null) continue;
+
+        if (!await userManager.IsInRoleAsync(user, adminRole))
+        {
+            await userManager.AddToRoleAsync(user, adminRole);
+        }
+    }
+}
 
 static string ResolveSqliteConnectionString(string connectionString)
 {

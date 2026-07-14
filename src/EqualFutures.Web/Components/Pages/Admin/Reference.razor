@@ -1,0 +1,116 @@
+@page "/admin/reference"
+@attribute [Authorize(Roles = "Admin")]
+@rendermode InteractiveServer
+@using EqualFutures.Domain
+
+<PageTitle>Reference · Admin · EqualFutures</PageTitle>
+
+<div class="ef-page-header">
+    <h1>Types &amp; Groups Reference</h1>
+    <p>
+        These lists are fixed by the calculation engine — each value drives specific tax and projection
+        logic (e.g. which accounts count toward retirement readiness), so they can't be added or renamed
+        from here without corresponding changes to the calculators. This page is a read-only reference
+        for support and documentation purposes.
+    </p>
+</div>
+
+<div class="ef-grid ef-grid-2">
+    <div class="ef-card">
+        <h2>Account groups (AccountCategory)</h2>
+        <table class="ef-table">
+            <tbody>
+                <tr><td>Investment</td><td>Counts toward retirement readiness and the nest egg projection.</td></tr>
+                <tr><td>Education</td><td>Counts toward each child's education funding projection.</td></tr>
+                <tr><td>Real Estate</td><td>Appreciates and (for rentals) contributes income; equity is informational, excluded from retirement readiness.</td></tr>
+                <tr><td>Other</td><td>Tracked for net worth only (e.g. cash) — excluded from every projection.</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="ef-card">
+        <h2>Account types (AccountType)</h2>
+        <table class="ef-table">
+            <tbody>
+                @foreach (var t in Enum.GetValues<AccountType>())
+                {
+                    <tr><td>@Humanize(t)</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="ef-card">
+        <h2>Tax treatments (TaxTreatment)</h2>
+        <table class="ef-table">
+            <tbody>
+                <tr><td>Tax-deferred</td><td>Contributions pre-tax, withdrawals taxed (401(k), Traditional IRA).</td></tr>
+                <tr><td>Tax-free</td><td>Contributions after-tax, qualified withdrawals tax-free (Roth, 529, HSA).</td></tr>
+                <tr><td>Taxable</td><td>Growth taxed as realized (brokerage, bank, real estate).</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="ef-card">
+        <h2>Liability types (LiabilityType)</h2>
+        <table class="ef-table">
+            <tbody>
+                @foreach (var t in Enum.GetValues<LiabilityType>())
+                {
+                    <tr><td>@Humanize(t)</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="ef-card">
+        <h2>College types (CollegeType)</h2>
+        <table class="ef-table">
+            <tbody>
+                @foreach (var t in Enum.GetValues<CollegeType>())
+                {
+                    <tr><td>@t.ToString()</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="ef-card">
+        <h2>Real estate use (RealEstateUse)</h2>
+        <table class="ef-table">
+            <tbody>
+                <tr><td>Primary residence</td><td>Appreciates; equity excluded from retirement readiness.</td></tr>
+                <tr><td>Rental</td><td>Appreciates and contributes net rental cash flow to guaranteed income.</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    private static string Humanize(AccountType t) => t switch
+    {
+        AccountType.FourZeroOneK => "401(k)",
+        AccountType.TraditionalIra => "Traditional IRA",
+        AccountType.RothIra => "Roth IRA",
+        AccountType.Brokerage => "Brokerage",
+        AccountType.Hsa => "HSA",
+        AccountType.FiveTwoNine => "529 plan",
+        AccountType.UtmaUgma => "UTMA/UGMA",
+        AccountType.EducationTrust => "Education trust",
+        AccountType.BankAccount => "Bank account",
+        AccountType.RealEstate => "Real estate",
+        AccountType.Business => "Business",
+        _ => t.ToString()
+    };
+
+    private static string Humanize(LiabilityType t) => t switch
+    {
+        LiabilityType.Mortgage => "Mortgage",
+        LiabilityType.StudentLoan => "Student loan",
+        LiabilityType.VehicleLoan => "Vehicle loan",
+        LiabilityType.CreditCard => "Credit card",
+        LiabilityType.PersonalLoan => "Personal loan",
+        LiabilityType.Other => "Other",
+        _ => t.ToString()
+    };
+}

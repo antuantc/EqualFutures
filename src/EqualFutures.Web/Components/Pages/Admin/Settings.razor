@@ -1,0 +1,94 @@
+@page "/admin/settings"
+@attribute [Authorize(Roles = "Admin")]
+@rendermode InteractiveServer
+@using EqualFutures.Infrastructure.Data
+@inject IAppSettingsService AppSettingsService
+
+<PageTitle>Settings · Admin · EqualFutures</PageTitle>
+
+<div class="ef-page-header">
+    <h1>Settings</h1>
+    <p>Global defaults and feature toggles. Changes here don't affect existing plans, only new ones (and the registration gate).</p>
+</div>
+
+@if (settings is null)
+{
+    <p>Loading…</p>
+}
+else
+{
+    <div class="ef-grid ef-grid-2">
+        <div class="ef-card">
+            <h2>Access</h2>
+            <div class="ef-field">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="allowReg" @bind="settings.AllowNewRegistrations" />
+                    <label class="form-check-label" for="allowReg">Allow new registrations</label>
+                </div>
+                <div style="color:var(--ef-muted);font-size:.82rem;margin-top:.15rem">
+                    When off, the Register page stops accepting new signups. Existing users can still sign in.
+                </div>
+            </div>
+        </div>
+
+        <div class="ef-card">
+            <h2>Default plan assumptions</h2>
+            <p style="color:var(--ef-muted);font-size:.85rem;margin-top:-.5rem">Used to seed every brand-new household's plan.</p>
+
+            <div class="ef-field">
+                <label>Inflation: @Pct(settings.DefaultInflationRate)</label>
+                <input type="range" class="form-range" min="0" max="0.06" step="0.005" @bind="settings.DefaultInflationRate" @bind:event="oninput" />
+            </div>
+            <div class="ef-field">
+                <label>Education inflation: @Pct(settings.DefaultEducationInflationRate)</label>
+                <input type="range" class="form-range" min="0" max="0.08" step="0.005" @bind="settings.DefaultEducationInflationRate" @bind:event="oninput" />
+            </div>
+            <div class="ef-field">
+                <label>Return before retirement: @Pct(settings.DefaultPreRetirementReturn)</label>
+                <input type="range" class="form-range" min="0.02" max="0.12" step="0.005" @bind="settings.DefaultPreRetirementReturn" @bind:event="oninput" />
+            </div>
+            <div class="ef-field">
+                <label>Return during retirement: @Pct(settings.DefaultPostRetirementReturn)</label>
+                <input type="range" class="form-range" min="0.02" max="0.10" step="0.005" @bind="settings.DefaultPostRetirementReturn" @bind:event="oninput" />
+            </div>
+            <div class="ef-field">
+                <label>Real estate appreciation: @Pct(settings.DefaultRealEstateAppreciationRate)</label>
+                <input type="range" class="form-range" min="0" max="0.08" step="0.0025" @bind="settings.DefaultRealEstateAppreciationRate" @bind:event="oninput" />
+            </div>
+            <div class="ef-field">
+                <label>Safe withdrawal rate: @Pct(settings.DefaultSafeWithdrawalRate)</label>
+                <input type="range" class="form-range" min="0.025" max="0.06" step="0.0025" @bind="settings.DefaultSafeWithdrawalRate" @bind:event="oninput" />
+            </div>
+            <div class="ef-field">
+                <label>Plan until age: @settings.DefaultPlanningHorizonAge</label>
+                <input type="range" class="form-range" min="85" max="100" step="1" @bind="settings.DefaultPlanningHorizonAge" @bind:event="oninput" />
+            </div>
+        </div>
+    </div>
+
+    <div class="ef-actions">
+        <button class="btn btn-primary" @onclick="SaveAsync" disabled="@busy">@(busy ? "Saving…" : "Save settings")</button>
+        @if (saved) { <span class="ef-pill good" style="align-self:center">Saved</span> }
+    </div>
+}
+
+@code {
+    private EqualFutures.Domain.AppSettings? settings;
+    private bool busy;
+    private bool saved;
+
+    protected override async Task OnInitializedAsync()
+    {
+        settings = await AppSettingsService.GetAsync();
+    }
+
+    private async Task SaveAsync()
+    {
+        busy = true;
+        await AppSettingsService.SaveAsync(settings!);
+        busy = false;
+        saved = true;
+    }
+
+    private static string Pct(decimal v) => v.ToString("P1");
+}
