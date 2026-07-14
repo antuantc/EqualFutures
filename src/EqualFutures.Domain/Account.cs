@@ -34,4 +34,11 @@ public class Account
 
     /// <summary>For child-specific education or retirement accounts, the child this balance is earmarked for.</summary>
     public int? BeneficiaryChildId { get; set; }
+
+    /// <summary>
+    /// For investment accounts, the parent this balance is attributed to. Used for
+    /// retirement-equity comparisons between parents. Null means jointly owned/shared
+    /// evenly across parents.
+    /// </summary>
+    public int? OwnerParentId { get; set; }
 }

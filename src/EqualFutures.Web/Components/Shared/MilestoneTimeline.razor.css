@@ -1,0 +1,34 @@
+.mt-timeline {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    position: relative;
+}
+
+.mt-item {
+    position: relative;
+    padding: 0 0 1.25rem 1.5rem;
+    border-left: 2px solid var(--ef-border);
+}
+.mt-item:last-child {
+    border-left-color: transparent;
+    padding-bottom: 0;
+}
+
+.mt-marker {
+    position: absolute;
+    left: -7px;
+    top: 2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--ef-primary);
+    border: 2px solid var(--ef-surface);
+}
+.mt-past .mt-marker { background: var(--ef-muted); }
+
+.mt-year { font-weight: 700; display: flex; align-items: center; gap: .5rem; }
+.mt-title { font-weight: 600; margin-top: .15rem; }
+.mt-detail { color: var(--ef-muted); font-size: .88rem; margin-top: .2rem; line-height: 1.4; }
+
+.mt-past .mt-title, .mt-past .mt-year { color: var(--ef-muted); }

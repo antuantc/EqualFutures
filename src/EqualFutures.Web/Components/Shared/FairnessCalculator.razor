@@ -1,0 +1,92 @@
+<div class="ef-card fc-card">
+    <h2>Fairness Contribution Calculator</h2>
+
+    @if (!Snapshot.HasComparablePair)
+    {
+        <p style="color:var(--ef-muted)">Add a second parent to model a fairness contribution.</p>
+    }
+    else
+    {
+        var leading = Snapshot.Parents.First(p => p.ParentId == Snapshot.LeadingParentId);
+        var lagging = Snapshot.Parents.First(p => p.ParentId == Snapshot.LaggingParentId);
+
+        <p class="fc-intro">
+            Model a monthly transfer from <strong>@leading.ParentName</strong> to <strong>@lagging.ParentName</strong>
+            to help close the retirement gap — often the result of a childcare career break.
+        </p>
+
+        <div class="ef-field">
+            <label>Primary earner top-up: @MonthlyTopUp.ToString("C0") / month</label>
+            <input type="range" class="form-range fc-slider" min="0" max="2000" step="25"
+                   @bind="MonthlyTopUp" @bind:event="oninput" @bind:after="NotifyTopUpChanged" />
+        </div>
+
+        <div class="ef-field">
+            <label>Childcare career break: @CareerBreakYears yr@(CareerBreakYears == 1 ? "" : "s")</label>
+            <input type="range" class="form-range fc-slider" min="0" max="10" step="1"
+                   @bind="CareerBreakYears" @bind:event="oninput" @bind:after="NotifyBreakYearsChanged" />
+        </div>
+
+        @if (Projection.Trajectory.Count > 1)
+        {
+            var points = Sample(Projection.Trajectory, 10);
+            decimal max = Projection.Trajectory.Max(p => Math.Max(p.LeadingBalance, p.LaggingBalance));
+
+            <div class="fc-chart">
+                @foreach (var p in points)
+                {
+                    double leadH = max > 0 ? (double)(p.LeadingBalance / max) * 100 : 0;
+                    double lagH = max > 0 ? (double)(p.LaggingBalance / max) * 100 : 0;
+                    <div class="fc-bar-group">
+                        <div class="fc-bars">
+                            <div class="fc-bar fc-bar-leading" style="height:@leadH.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)%"
+                                 title="@($"{leading.ParentName} {p.CalendarYear}: {p.LeadingBalance:C0}")"></div>
+                            <div class="fc-bar fc-bar-lagging" style="height:@lagH.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)%"
+                                 title="@($"{lagging.ParentName} {p.CalendarYear}: {p.LaggingBalance:C0}")"></div>
+                        </div>
+                        <div class="cap">@p.CalendarYear</div>
+                    </div>
+                }
+            </div>
+
+            <div class="fc-result">
+                @if (Projection.GapClosesYear is int year)
+                {
+                    <span class="ef-pill good">Gap closes by @year</span>
+                }
+                else
+                {
+                    <span class="ef-pill warn">Remaining gap: @Projection.FinalGap.ToString("C0")</span>
+                }
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public PartnerEquitySnapshot Snapshot { get; set; } = null!;
+    [Parameter, EditorRequired] public CatchUpProjection Projection { get; set; } = null!;
+
+    [Parameter] public decimal MonthlyTopUp { get; set; }
+    [Parameter] public EventCallback<decimal> MonthlyTopUpChanged { get; set; }
+
+    [Parameter] public int CareerBreakYears { get; set; }
+    [Parameter] public EventCallback<int> CareerBreakYearsChanged { get; set; }
+
+    private Task NotifyTopUpChanged() => MonthlyTopUpChanged.InvokeAsync(MonthlyTopUp);
+    private Task NotifyBreakYearsChanged() => CareerBreakYearsChanged.InvokeAsync(CareerBreakYears);
+
+    /// <summary>Down-samples a trajectory to at most <paramref name="maxPoints"/> evenly spaced points for charting.</summary>
+    private static List<CatchUpYearPoint> Sample(IReadOnlyList<CatchUpYearPoint> trajectory, int maxPoints)
+    {
+        if (trajectory.Count <= maxPoints) return trajectory.ToList();
+
+        var result = new List<CatchUpYearPoint>();
+        double step = (trajectory.Count - 1) / (double)(maxPoints - 1);
+        for (int i = 0; i < maxPoints; i++)
+        {
+            result.Add(trajectory[(int)Math.Round(i * step)]);
+        }
+        return result;
+    }
+}

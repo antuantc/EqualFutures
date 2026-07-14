@@ -1,0 +1,92 @@
+@* Desktop: side-by-side partner comparison. Mobile: consolidated donut + accordion. *@
+<div class="ef-card eq-snapshot">
+    <h2>Household Progress</h2>
+
+    @if (!Snapshot.HasComparablePair)
+    {
+        <p style="color:var(--ef-muted)">Add a second parent to compare retirement trajectories.</p>
+    }
+    else
+    {
+        var leading = Snapshot.Parents.First(p => p.ParentId == Snapshot.LeadingParentId);
+        var lagging = Snapshot.Parents.First(p => p.ParentId == Snapshot.LaggingParentId);
+        var leadingShare = Math.Max(0.0001, (double)leading.SharePercent);
+        var laggingShare = Math.Max(0.0001, (double)lagging.SharePercent);
+        var leadingDeg = leadingShare / (leadingShare + laggingShare) * 360.0;
+
+        <!-- Desktop comparative metric block -->
+        <div class="eq-desktop">
+            <div class="ef-grid ef-grid-2">
+                @foreach (var line in Snapshot.Parents)
+                {
+                    <div class="eq-partner-card">
+                        <div class="eq-partner-name">
+                            @line.ParentName
+                            @if (line.ParentId == Snapshot.LeadingParentId)
+                            {
+                                <span class="ef-pill good">Leading</span>
+                            }
+                            else
+                            {
+                                <span class="ef-pill warn">Behind @Snapshot.ProjectedGap.ToString("C0")</span>
+                            }
+                        </div>
+                        <div class="eq-partner-value">@line.ProjectedBalance.ToString("C0")</div>
+                        <div class="eq-partner-sub">projected at age @line.PlannedRetirementAge · @line.SharePercent.ToString("0.#")% of household</div>
+                        <MiniProgress Percent="@line.SharePercent" />
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Mobile: consolidated radial visual with accordion for individual balances -->
+        <div class="eq-mobile">
+            <div class="eq-donut-wrap">
+                <div class="eq-donut" style="--eq-leading-deg:@leadingDeg.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)deg">
+                    <div class="eq-donut-hole">
+                        <div class="eq-donut-value">@Snapshot.CombinedProjectedBalance.ToString("C0")</div>
+                        <div class="eq-donut-label">combined projected</div>
+                    </div>
+                </div>
+            </div>
+            <div class="eq-legend">
+                <span class="eq-legend-item"><span class="eq-swatch eq-swatch-leading"></span>@leading.ParentName — @leading.SharePercent.ToString("0.#")%</span>
+                <span class="eq-legend-item"><span class="eq-swatch eq-swatch-lagging"></span>@lagging.ParentName — @lagging.SharePercent.ToString("0.#")%</span>
+            </div>
+            <details class="eq-accordion">
+                <summary>Show individual balances</summary>
+                <table class="ef-table" style="margin-top:.5rem">
+                    <tbody>
+                        @foreach (var line in Snapshot.Parents)
+                        {
+                            <tr>
+                                <td>@line.ParentName</td>
+                                <td class="num">@line.CurrentBalance.ToString("C0") today</td>
+                                <td class="num">@line.ProjectedBalance.ToString("C0") projected</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </details>
+        </div>
+
+        @if (Projection.Trajectory.Count > 0)
+        {
+            <p class="eq-projection-note">
+                @if (Projection.GapClosesYear is int year)
+                {
+                    <span>With the current fairness contribution, the gap is projected to close by <strong>@year</strong>.</span>
+                }
+                else
+                {
+                    <span>With the current fairness contribution, a gap of <strong>@Projection.FinalGap.ToString("C0")</strong> is projected to remain.</span>
+                }
+            </p>
+        }
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public PartnerEquitySnapshot Snapshot { get; set; } = null!;
+    [Parameter, EditorRequired] public CatchUpProjection Projection { get; set; } = null!;
+}

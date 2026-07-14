@@ -32,7 +32,7 @@ else
             <thead>
                 <tr>
                     <th>Name</th><th>Type</th><th>Group</th><th>Tax</th>
-                    <th class="num">Balance</th><th class="num">Annual contribution</th><th>For child</th><th></th>
+                    <th class="num">Balance</th><th class="num">Annual contribution</th><th>For child</th><th>For parent</th><th></th>
                 </tr>
             </thead>
             <tbody>
@@ -64,8 +64,8 @@ else
                                 }
                             </select>
                         </td>
-                        <td class="num" data-label="Balance"><input type="number" class="form-control form-control-sm" @bind="a.CurrentBalance" /></td>
-                        <td class="num" data-label="Annual contribution"><input type="number" class="form-control form-control-sm" @bind="a.AnnualContribution" /></td>
+                        <td class="num" data-label="Balance"><div class="input-group input-group-sm"><span class="input-group-text">$</span><input type="number" class="form-control form-control-sm" @bind="a.CurrentBalance" /></div></td>
+                        <td class="num" data-label="Annual contribution"><div class="input-group input-group-sm"><span class="input-group-text">$</span><input type="number" class="form-control form-control-sm" @bind="a.AnnualContribution" /></div></td>
                         <td data-label="For child">
                             @if (CanAssignToChild(a))
                             {
@@ -74,6 +74,18 @@ else
                                     @foreach (var c in plan.Children)
                                     {
                                         <option value="@c.Id">@c.Name</option>
+                                    }
+                                </select>
+                            }
+                        </td>
+                        <td data-label="For parent">
+                            @if (CanAssignToParent(a))
+                            {
+                                <select class="form-select form-select-sm" @bind="a.OwnerParentId">
+                                    <option value="">Joint</option>
+                                    @foreach (var p in plan.Parents)
+                                    {
+                                        <option value="@p.Id">@p.Name</option>
                                     }
                                 </select>
                             }
@@ -90,7 +102,7 @@ else
         <h2>Liabilities</h2>
         <table class="ef-table ef-table-cards">
             <thead>
-                <tr><th>Name</th><th>Type</th><th class="num">Balance</th><th class="num">Rate %</th><th class="num">Monthly payment</th><th></th></tr>
+                <tr><th>Name</th><th>Type</th><th class="num">Balance</th><th class="num">Rate (e.g. 0.065 = 6.5%)</th><th class="num">Monthly payment</th><th></th></tr>
             </thead>
             <tbody>
                 @foreach (var l in plan.Liabilities)
@@ -105,9 +117,9 @@ else
                                 }
                             </select>
                         </td>
-                        <td class="num" data-label="Balance"><input type="number" class="form-control form-control-sm" @bind="l.CurrentBalance" /></td>
-                        <td class="num" data-label="Rate %"><input type="number" step="0.001" class="form-control form-control-sm" @bind="l.InterestRate" /></td>
-                        <td class="num" data-label="Monthly payment"><input type="number" class="form-control form-control-sm" @bind="l.MonthlyPayment" /></td>
+                        <td class="num" data-label="Balance"><div class="input-group input-group-sm"><span class="input-group-text">$</span><input type="number" class="form-control form-control-sm" @bind="l.CurrentBalance" /></div></td>
+                        <td class="num" data-label="Rate (e.g. 0.065 = 6.5%)"><input type="number" step="0.001" class="form-control form-control-sm" @bind="l.InterestRate" /></td>
+                        <td class="num" data-label="Monthly payment"><div class="input-group input-group-sm"><span class="input-group-text">$</span><input type="number" class="form-control form-control-sm" @bind="l.MonthlyPayment" /></div></td>
                         <td data-label=""><button class="btn btn-sm btn-outline-danger" @onclick="() => plan.Liabilities.Remove(l)">Remove</button></td>
                     </tr>
                 }
@@ -149,6 +161,9 @@ else
 
     private static bool CanAssignToChild(Account account) =>
         account.Category is AccountCategory.Education or AccountCategory.Investment;
+
+    private static bool CanAssignToParent(Account account) =>
+        account.Category == AccountCategory.Investment;
 
     private static string Humanize(AccountType t) => t switch
     {

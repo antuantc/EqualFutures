@@ -13,6 +13,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddEqualFuturesCore(this IServiceCollection services)
     {
         services.AddScoped<IRetirementCalculator, RetirementCalculator>();
+        services.AddScoped<IPartnerEquityCalculator, PartnerEquityCalculator>();
         services.AddScoped<IEducationCalculator, EducationCalculator>();
         services.AddScoped<IFairnessEngine, FairnessEngine>();
         services.AddScoped<IRecommendationEngine, RecommendationEngine>();

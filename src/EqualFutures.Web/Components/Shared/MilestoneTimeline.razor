@@ -1,0 +1,83 @@
+<div class="ef-card mt-card">
+    <h2>Milestone Timeline</h2>
+    <p style="color:var(--ef-muted);font-size:.9rem;margin-top:-.5rem">
+        Upcoming child milestones that free up household cash flow for fairness contributions.
+    </p>
+
+    @if (Milestones.Count == 0)
+    {
+        <p style="color:var(--ef-muted)">Add a child on the <a href="family">Family Profile</a> page to see milestones here.</p>
+    }
+    else
+    {
+        <ol class="mt-timeline">
+            @foreach (var m in Milestones)
+            {
+                <li class="mt-item @(m.Year < CurrentYear ? "mt-past" : "mt-upcoming")">
+                    <div class="mt-marker" aria-hidden="true"></div>
+                    <div class="mt-body">
+                        <div class="mt-year">
+                            @m.Year
+                            @if (m.Year < CurrentYear)
+                            {
+                                <span class="ef-pill good">Past</span>
+                            }
+                            else if (m.Year == CurrentYear)
+                            {
+                                <span class="ef-pill warn">This year</span>
+                            }
+                        </div>
+                        <div class="mt-title">@m.Title — @m.ChildName</div>
+                        <div class="mt-detail">@m.Detail</div>
+                    </div>
+                </li>
+            }
+        </ol>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<Child> Children { get; set; } = Array.Empty<Child>();
+    [Parameter, EditorRequired] public IReadOnlyList<EducationProjection> EducationProjections { get; set; } = Array.Empty<EducationProjection>();
+
+    private int CurrentYear => DateTime.UtcNow.Year;
+
+    private List<MilestoneEntry> Milestones => BuildMilestones();
+
+    private List<MilestoneEntry> BuildMilestones()
+    {
+        var list = new List<MilestoneEntry>();
+
+        foreach (var child in Children)
+        {
+            int daycareEndYear = child.BirthDate.Year + 5;
+            list.Add(new MilestoneEntry(
+                daycareEndYear,
+                child.Name,
+                "Daycare ends / school starts",
+                "Recurring childcare spending typically eases around this age — a good point to revisit the fairness contribution."));
+
+            var edu = EducationProjections.FirstOrDefault(e => e.ChildId == child.Id);
+            if (edu is not null)
+            {
+                list.Add(new MilestoneEntry(
+                    edu.CollegeStartYear,
+                    child.Name,
+                    "College begins",
+                    $"Family contribution of {edu.DesiredFamilyContribution:C0} begins; {edu.ProjectedEducationSavings:C0} is currently projected to be saved."));
+
+                int collegeEndYear = edu.CollegeStartYear + Math.Max(0, child.YearsOfCollege);
+                decimal avgAnnual = child.YearsOfCollege > 0 ? edu.DesiredFamilyContribution / child.YearsOfCollege : 0m;
+                list.Add(new MilestoneEntry(
+                    collegeEndYear,
+                    child.Name,
+                    "College contributions end",
+                    $"About {avgAnnual:C0}/yr frees up once {child.Name}'s college years are complete."));
+            }
+        }
+
+        return list.OrderBy(m => m.Year).ToList();
+    }
+
+    private record MilestoneEntry(int Year, string ChildName, string Title, string Detail);
+}

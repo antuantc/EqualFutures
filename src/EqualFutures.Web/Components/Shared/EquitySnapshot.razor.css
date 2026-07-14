@@ -1,0 +1,67 @@
+.eq-mobile { display: none; }
+
+.eq-partner-card {
+    border: 1px solid var(--ef-border);
+    border-radius: var(--ef-radius);
+    padding: 1rem;
+}
+.eq-partner-name { display: flex; align-items: center; gap: .5rem; font-weight: 650; flex-wrap: wrap; }
+.eq-partner-value { font-size: clamp(1.25rem, 2.2vw, 1.55rem); font-weight: 700; margin-top: .35rem; }
+.eq-partner-sub { color: var(--ef-muted); font-size: .82rem; margin: .2rem 0 .6rem; }
+
+.eq-donut-wrap { display: flex; justify-content: center; padding: .5rem 0 1rem; }
+.eq-donut {
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: conic-gradient(
+        var(--ef-primary) 0deg var(--eq-leading-deg, 180deg),
+        var(--ef-accent) var(--eq-leading-deg, 180deg) 360deg
+    );
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+.eq-donut-hole {
+    width: 128px;
+    height: 128px;
+    border-radius: 50%;
+    background: var(--ef-surface);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: .5rem;
+}
+.eq-donut-value { font-weight: 700; font-size: 1.05rem; overflow-wrap: anywhere; }
+.eq-donut-label { color: var(--ef-muted); font-size: .72rem; margin-top: .15rem; }
+
+.eq-legend { display: flex; justify-content: center; gap: 1.25rem; flex-wrap: wrap; font-size: .88rem; }
+.eq-legend-item { display: inline-flex; align-items: center; gap: .4rem; }
+.eq-swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.eq-swatch-leading { background: var(--ef-primary); }
+.eq-swatch-lagging { background: var(--ef-accent); }
+
+.eq-accordion { margin-top: 1rem; }
+.eq-accordion summary {
+    cursor: pointer;
+    font-weight: 600;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    padding: 0 .25rem;
+    border-radius: 6px;
+}
+.eq-accordion summary:focus-visible {
+    outline: 2px solid var(--ef-primary);
+    outline-offset: 2px;
+}
+
+.eq-projection-note { margin: 1rem 0 0; color: var(--ef-muted); font-size: .9rem; }
+
+@media (max-width: 760px) {
+    .eq-desktop { display: none; }
+    .eq-mobile { display: block; }
+}

@@ -1,0 +1,48 @@
+@page "/equity"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject PlanState State
+@inject IPartnerEquityCalculator EquityCalculator
+
+<PageTitle>Retirement Equity · EqualFutures</PageTitle>
+
+<div class="ef-page-header">
+    <h1>Retirement Equity</h1>
+    <p>Compare each parent's retirement trajectory and model a fairness contribution to close any gap — often the result of a childcare career break.</p>
+</div>
+
+@if (!State.IsLoaded || State.Plan is null)
+{
+    <p>Loading…</p>
+}
+else if (State.Plan.Parents.Count < 2)
+{
+    <div class="ef-card">
+        <p>Retirement equity comparisons need two parents. Add a second parent on the <a href="family">Family Profile</a> page.</p>
+    </div>
+}
+else
+{
+    var plan = State.Plan;
+    var snapshot = EquityCalculator.Evaluate(plan);
+    var projection = EquityCalculator.ProjectCatchUp(plan, snapshot, monthlyTopUp, careerBreakYears);
+    var education = State.Summary?.Education ?? Array.Empty<EducationProjection>();
+
+    <EquitySnapshot Snapshot="snapshot" Projection="projection" />
+
+    <div class="ef-grid ef-grid-2" style="margin-top:1rem">
+        <FairnessCalculator Snapshot="snapshot"
+                            Projection="projection"
+                            @bind-MonthlyTopUp="monthlyTopUp"
+                            @bind-CareerBreakYears="careerBreakYears" />
+
+        <MilestoneTimeline Children="plan.Children" EducationProjections="education" />
+    </div>
+}
+
+@code {
+    private decimal monthlyTopUp;
+    private int careerBreakYears;
+
+    protected override async Task OnInitializedAsync() => await State.EnsureLoadedAsync();
+}
