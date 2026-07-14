@@ -26,10 +26,8 @@ public class RetirementCalculatorTests
                 PreRetirementReturn = 0.05m,
                 SafeWithdrawalRate = 0.04m
             },
-            Parents =
-            {
-                new Parent { Name = "A", CurrentAge = 64, PlannedRetirementAge = 65, ExpectedAnnualRetirementSpending = 20_000m }
-            },
+            ExpectedAnnualRetirementSpending = 20_000m,
+            Parents = { new Parent { Name = "A", CurrentAge = 64, PlannedRetirementAge = 65 } },
             Accounts =
             {
                 new Account { Category = AccountCategory.Investment, CurrentBalance = 600_000m, AnnualContribution = 0m }
@@ -52,7 +50,8 @@ public class RetirementCalculatorTests
         var plan = new FinancialPlan
         {
             Assumptions = new PlanAssumptions { InflationRate = 0.03m, PreRetirementReturn = 0.07m, SafeWithdrawalRate = 0.04m },
-            Parents = { new Parent { CurrentAge = 60, PlannedRetirementAge = 65, ExpectedAnnualRetirementSpending = 60_000m } },
+            ExpectedAnnualRetirementSpending = 60_000m,
+            Parents = { new Parent { CurrentAge = 60, PlannedRetirementAge = 65 } },
             Accounts = { new Account { Category = AccountCategory.Investment, CurrentBalance = 100_000m } }
         };
 
@@ -68,10 +67,8 @@ public class RetirementCalculatorTests
         var plan = new FinancialPlan
         {
             Assumptions = new PlanAssumptions { InflationRate = 0m, PreRetirementReturn = 0m, SafeWithdrawalRate = 0.04m },
-            Parents =
-            {
-                new Parent { CurrentAge = 65, PlannedRetirementAge = 65, ExpectedAnnualRetirementSpending = 50_000m, EstimatedAnnualSocialSecurity = 30_000m }
-            },
+            ExpectedAnnualRetirementSpending = 50_000m,
+            Parents = { new Parent { CurrentAge = 65, PlannedRetirementAge = 65, EstimatedAnnualSocialSecurity = 30_000m } },
             Accounts = { new Account { Category = AccountCategory.Investment, CurrentBalance = 500_000m } }
         };
 

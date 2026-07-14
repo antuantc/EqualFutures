@@ -19,10 +19,6 @@ public class Child
     /// <summary>Number of years of schooling the household intends to help fund.</summary>
     public int YearsOfCollege { get; set; } = 4;
 
-    /// <summary>Number of retirement groups associated with this child in the household plan.</summary>
-    [Range(0, 10)]
-    public int RetirementGroupCount { get; set; }
-
     /// <summary>The modelled college path, which drives the base annual cost.</summary>
     public CollegeType CollegeType { get; set; } = CollegeType.PublicUniversity;
 

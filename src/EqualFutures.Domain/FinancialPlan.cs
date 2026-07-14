@@ -18,6 +18,9 @@ public class FinancialPlan
     [Required, MaxLength(120)]
     public string HouseholdName { get; set; } = "My Family";
 
+    /// <summary>Annual amount the household expects to spend in retirement (today's dollars).</summary>
+    public decimal ExpectedAnnualRetirementSpending { get; set; }
+
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
 

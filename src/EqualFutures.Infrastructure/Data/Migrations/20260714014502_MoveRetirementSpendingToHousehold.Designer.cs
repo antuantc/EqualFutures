@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EqualFutures.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(FinancialDbContext))]
-    [Migration("20260714012631_AddChildRetirementGroupCount")]
-    partial class AddChildRetirementGroupCount
+    [Migration("20260714014502_MoveRetirementSpendingToHousehold")]
+    partial class MoveRetirementSpendingToHousehold
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -100,9 +100,6 @@ namespace EqualFutures.Infrastructure.Data.Migrations
                         .HasMaxLength(80)
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("RetirementGroupCount")
-                        .HasColumnType("INTEGER");
-
                     b.Property<int>("YearsOfCollege")
                         .HasColumnType("INTEGER");
 
@@ -120,6 +117,10 @@ namespace EqualFutures.Infrastructure.Data.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("CreatedUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("ExpectedAnnualRetirementSpending")
+                        .HasPrecision(18, 2)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("HouseholdName")
@@ -198,10 +199,6 @@ namespace EqualFutures.Infrastructure.Data.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<decimal>("EstimatedAnnualSocialSecurity")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal>("ExpectedAnnualRetirementSpending")
                         .HasPrecision(18, 2)
                         .HasColumnType("TEXT");
 

@@ -38,7 +38,7 @@ The guiding principle: **retirement comes first, because you cannot borrow for i
 | Module | What it does |
 |--------|--------------|
 | **Dashboard** | High-level snapshot: retirement readiness, education funding, net worth, investment allocation, cash flow, and explained recommendations. |
-| **Family Profile** | Edit parents (ages, retirement age, income, retirement spending, Social Security, pension) and children (birth date, college start year, college type, funding target, scholarships, and retirement group count). |
+| **Family Profile** | Edit household retirement spending, parents (ages, retirement age, income, Social Security, pension), and children (birth date, college start year, college type, funding target, scholarships). |
 | **Assets & Liabilities** | Track investment accounts (401(k), IRA, Roth, Brokerage, HSA), education accounts (529, UTMA/UGMA, trust), other assets (bank, real estate, business), and debts (mortgage, student loan, other). Education and retirement/investment accounts can be assigned to a specific child for fairness analysis. |
 | **Retirement Planning** | Projections, safe-withdrawal estimates, portfolio growth, inflation adjustment, and the retirement funding gap — with **interactive assumption sliders** that recompute instantly. |
 | **Education Planning** | Per-child inflation-adjusted college cost, projected 529/savings, scholarships, family contribution, student responsibility, and remaining funding gap. |

@@ -28,6 +28,7 @@ public static class SamplePlanFactory
         int thisYear = DateTime.UtcNow.Year;
 
         plan.HouseholdName = "The Rivera Family";
+        plan.ExpectedAnnualRetirementSpending = 90_000m;
         plan.PreferredFairnessMetric = FairnessMetric.EqualInflationAdjustedValue;
         plan.Assumptions = new PlanAssumptions();
 
@@ -37,7 +38,6 @@ public static class SamplePlanFactory
             CurrentAge = 42,
             PlannedRetirementAge = 65,
             AnnualIncome = 120_000m,
-            ExpectedAnnualRetirementSpending = 90_000m,
             EstimatedAnnualSocialSecurity = 30_000m,
             SocialSecurityClaimingAge = 67,
             AnnualPensionIncome = 0m
@@ -48,7 +48,6 @@ public static class SamplePlanFactory
             CurrentAge = 40,
             PlannedRetirementAge = 65,
             AnnualIncome = 95_000m,
-            ExpectedAnnualRetirementSpending = 90_000m,
             EstimatedAnnualSocialSecurity = 26_000m,
             SocialSecurityClaimingAge = 67,
             AnnualPensionIncome = 0m

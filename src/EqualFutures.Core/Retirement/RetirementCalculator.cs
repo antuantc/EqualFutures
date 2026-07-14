@@ -38,8 +38,8 @@ public class RetirementCalculator : IRetirementCalculator
                 a.ExpectedReturnOverride ?? assumptions.PreRetirementReturn,
                 years));
 
-        // Household spending need in future dollars (take the household figure once, not per parent).
-        decimal todaysSpending = plan.Parents.Max(p => p.ExpectedAnnualRetirementSpending);
+        // Household spending need in future dollars.
+        decimal todaysSpending = plan.ExpectedAnnualRetirementSpending;
         decimal annualSpendingNeed = FinancialMath.InflateValue(todaysSpending, assumptions.InflationRate, years);
 
         // Guaranteed income assumed to be inflation-indexed to the retirement date.

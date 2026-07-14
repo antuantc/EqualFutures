@@ -17,9 +17,6 @@ public class Parent
     /// <summary>Current gross annual employment income.</summary>
     public decimal AnnualIncome { get; set; }
 
-    /// <summary>Annual amount the household expects to spend in retirement (today's dollars).</summary>
-    public decimal ExpectedAnnualRetirementSpending { get; set; }
-
     /// <summary>Estimated annual Social Security benefit at claiming age (today's dollars).</summary>
     public decimal EstimatedAnnualSocialSecurity { get; set; }
 

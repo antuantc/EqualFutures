@@ -31,6 +31,10 @@ else
             <label>Household name</label>
             <input class="form-control" @bind="plan.HouseholdName" disabled="@(!State.CanEdit)" />
         </div>
+        <div class="ef-field" style="max-width:420px">
+            <label>Household retirement spending / yr</label>
+            <input type="number" class="form-control" @bind="plan.ExpectedAnnualRetirementSpending" disabled="@(!State.CanEdit)" />
+        </div>
         @if (State.CanEdit)
         {
             <div class="ef-actions">
@@ -63,7 +67,6 @@ else
                 <div class="ef-field"><label>Current age</label><input type="number" class="form-control" @bind="p.CurrentAge" /></div>
                 <div class="ef-field"><label>Retirement age</label><input type="number" class="form-control" @bind="p.PlannedRetirementAge" /></div>
                 <div class="ef-field"><label>Annual income</label><input type="number" class="form-control" @bind="p.AnnualIncome" /></div>
-                <div class="ef-field"><label>Retirement spending / yr</label><input type="number" class="form-control" @bind="p.ExpectedAnnualRetirementSpending" /></div>
                 <div class="ef-field"><label>Social Security / yr</label><input type="number" class="form-control" @bind="p.EstimatedAnnualSocialSecurity" /></div>
                 <div class="ef-field"><label>Pension / yr</label><input type="number" class="form-control" @bind="p.AnnualPensionIncome" /></div>
                 <div class="ef-field">
@@ -83,15 +86,6 @@ else
                 <div class="ef-field"><label>Birth date</label><input type="date" class="form-control" @bind="c.BirthDate" /></div>
                 <div class="ef-field"><label>College start year</label><input type="number" class="form-control" @bind="c.ExpectedCollegeStartYear" /></div>
                 <div class="ef-field"><label>Years of college</label><input type="number" class="form-control" @bind="c.YearsOfCollege" /></div>
-                <div class="ef-field">
-                    <label>Retirement group count</label>
-                    <select class="form-select" @bind="c.RetirementGroupCount">
-                        @for (var count = 0; count <= 10; count++)
-                        {
-                            <option value="@count">@count</option>
-                        }
-                    </select>
-                </div>
                 <div class="ef-field">
                     <label>College type</label>
                     <select class="form-select" @bind="c.CollegeType">
@@ -156,7 +150,6 @@ else
             BirthDate = new DateOnly(year - 5, 1, 1),
             ExpectedCollegeStartYear = year + 13,
             YearsOfCollege = 4,
-            RetirementGroupCount = 0,
             DesiredFundingPercent = 1.0m
         });
     }
