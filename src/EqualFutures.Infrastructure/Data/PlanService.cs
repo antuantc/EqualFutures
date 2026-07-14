@@ -79,8 +79,11 @@ public class PlanService(FinancialDbContext db) : IPlanService
         SamplePlanFactory.Populate(plan);
         await db.SaveChangesAsync(ct);
 
-        // Child ids are only known after the first save; link 529 accounts now.
-        if (SamplePlanFactory.LinkEducationBeneficiaries(plan))
+        // Child ids and liability ids are only known after the first save; link 529
+        // accounts and real estate mortgages now.
+        bool needsSecondSave = SamplePlanFactory.LinkEducationBeneficiaries(plan);
+        needsSecondSave |= SamplePlanFactory.LinkRealEstateMortgages(plan);
+        if (needsSecondSave)
             await db.SaveChangesAsync(ct);
 
         return plan;

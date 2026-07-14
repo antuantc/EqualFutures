@@ -5,7 +5,11 @@ public enum AccountCategory
 {
     Investment,
     Education,
-    Other
+    Other,
+
+    /// <summary>Real property such as a primary home, rental, or land. Tracked for net worth
+    /// but excluded from retirement/education projections since it isn't liquid savings.</summary>
+    RealEstate
 }
 
 /// <summary>Specific account type. Drives tax treatment and which module an account feeds.</summary>
@@ -46,7 +50,25 @@ public enum LiabilityType
 {
     Mortgage,
     StudentLoan,
-    Other
+    Other,
+
+    /// <summary>Loan on a motorcycle, boat, car, or truck.</summary>
+    VehicleLoan,
+    CreditCard,
+    PersonalLoan
+}
+
+/// <summary>How a real estate account is used, which determines how it feeds retirement projections.</summary>
+public enum RealEstateUse
+{
+    /// <summary>A home the household lives in. Appreciates, but its equity isn't liquid
+    /// so it is excluded from retirement readiness by default.</summary>
+    PrimaryResidence,
+
+    /// <summary>An income-producing property. Appreciates like a primary residence, and its
+    /// net rental cash flow (after vacancy, expenses, and debt service) counts as guaranteed
+    /// retirement income.</summary>
+    Rental
 }
 
 /// <summary>The kind of post-secondary path modelled for a child.</summary>

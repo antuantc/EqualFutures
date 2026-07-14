@@ -27,6 +27,7 @@ public class RecommendationEngine : IRecommendationEngine
         AddFairness(fairness, recs);
         AddDebt(plan, recs);
         AddTax(plan, recs);
+        AddAllocation(plan, retirement, education, recs);
 
         return recs;
     }
@@ -137,6 +138,110 @@ public class RecommendationEngine : IRecommendationEngine
                 Title = "Explore Roth conversion opportunities",
                 Detail = "A large share of savings is in tax-deferred accounts.",
                 Reasoning = $"You hold {deferred:C0} in tax-deferred accounts versus {taxFree:C0} tax-free. Converting some to Roth in lower-income years can reduce future required minimum distributions and lifetime taxes."
+            });
+        }
+    }
+
+    /// <summary>
+    /// Account-level "where should the next dollar go" guidance: which accounts deserve
+    /// more, which have gone idle, and which have grown past their goal and could be
+    /// redirected or moved elsewhere.
+    /// </summary>
+    private static void AddAllocation(FinancialPlan plan, RetirementProjection retirement, IReadOnlyList<EducationProjection> education, List<Recommendation> recs)
+    {
+        AddHsaPriority(plan, recs);
+        AddTaxAdvantagedOverTaxable(plan, recs);
+        AddIdleCash(plan, retirement, education, recs);
+        AddOverfundedEducationAccounts(plan, education, recs);
+    }
+
+    private static void AddHsaPriority(FinancialPlan plan, List<Recommendation> recs)
+    {
+        var underfundedHsas = plan.Accounts.Where(a => a.Type == AccountType.Hsa && a.AnnualContribution <= 0m).ToList();
+        if (underfundedHsas.Count == 0) return;
+
+        recs.Add(new Recommendation
+        {
+            Category = RecommendationCategory.Allocation,
+            Severity = RecommendationSeverity.Suggestion,
+            Title = "Prioritise your HSA",
+            Detail = $"{string.Join(", ", underfundedHsas.Select(a => a.Name))} {(underfundedHsas.Count == 1 ? "isn't" : "aren't")} receiving new contributions.",
+            Reasoning = "A health savings account is the only account with a triple tax advantage: contributions are deductible, growth is tax-free, and withdrawals for qualified medical expenses are never taxed. Most advisors rank it above a traditional 401(k) or IRA once any employer match is captured."
+        });
+    }
+
+    private static void AddTaxAdvantagedOverTaxable(FinancialPlan plan, List<Recommendation> recs)
+    {
+        var investment = plan.Accounts.Where(a => a.Category == AccountCategory.Investment).ToList();
+        var fundedTaxable = investment.Where(a => a.TaxTreatment == TaxTreatment.Taxable && a.AnnualContribution > 0m).ToList();
+        var idleAdvantaged = investment.Where(a => a.TaxTreatment != TaxTreatment.Taxable && a.AnnualContribution <= 0m).ToList();
+
+        if (fundedTaxable.Count == 0 || idleAdvantaged.Count == 0) return;
+
+        decimal taxableAnnual = fundedTaxable.Sum(a => a.AnnualContribution);
+
+        recs.Add(new Recommendation
+        {
+            Category = RecommendationCategory.Allocation,
+            Severity = RecommendationSeverity.Suggestion,
+            Title = "Fund tax-advantaged accounts before your brokerage",
+            Detail = $"You're contributing {taxableAnnual:C0}/yr to {string.Join(", ", fundedTaxable.Select(a => a.Name))} (taxable) while {string.Join(", ", idleAdvantaged.Select(a => a.Name))} {(idleAdvantaged.Count == 1 ? "gets" : "get")} nothing added.",
+            Reasoning = "Tax-deferred and tax-free accounts shelter growth from tax every year; a taxable brokerage doesn't. Redirecting new savings to the tax-advantaged accounts first, then using the brokerage for anything beyond that, generally leaves more money compounding for the same contribution."
+        });
+    }
+
+    private static void AddIdleCash(FinancialPlan plan, RetirementProjection retirement, IReadOnlyList<EducationProjection> education, List<Recommendation> recs)
+    {
+        var bankAccounts = plan.Accounts.Where(a => a.Type == AccountType.BankAccount).ToList();
+        decimal cash = bankAccounts.Sum(a => a.CurrentBalance);
+        if (cash <= 0m || plan.ExpectedAnnualRetirementSpending <= 0m) return;
+
+        decimal emergencyFundTarget = plan.ExpectedAnnualRetirementSpending * 0.5m; // ~6 months of spending
+        decimal excess = cash - emergencyFundTarget;
+        if (excess <= 0m) return;
+
+        string destination;
+        if (retirement.FundingGap < 0m)
+        {
+            destination = "your retirement accounts, which are currently projected to fall short";
+        }
+        else
+        {
+            var neediest = education.Where(e => e.FundingGap > 0m).OrderByDescending(e => e.FundingGap).FirstOrDefault();
+            destination = neediest is not null
+                ? $"{neediest.ChildName}'s 529, which has a {neediest.FundingGap:C0} projected funding gap"
+                : "your investment accounts so it isn't losing purchasing power to inflation";
+        }
+
+        recs.Add(new Recommendation
+        {
+            Category = RecommendationCategory.Allocation,
+            Severity = RecommendationSeverity.Suggestion,
+            Title = "Put idle cash to work",
+            Detail = $"{string.Join(", ", bankAccounts.Select(a => a.Name))} holds {cash:C0}, about {excess:C0} more than a 6-month emergency fund needs.",
+            Reasoning = $"Cash sitting beyond your emergency reserve loses purchasing power to inflation with no offsetting growth. Consider moving the excess into {destination}."
+        });
+    }
+
+    private static void AddOverfundedEducationAccounts(FinancialPlan plan, IReadOnlyList<EducationProjection> education, List<Recommendation> recs)
+    {
+        foreach (var e in education.Where(e =>
+            e.ProjectedEducationSavings > 0m &&
+            e.DesiredFamilyContribution > 0m &&
+            e.ProjectedEducationSavings > e.DesiredFamilyContribution * 1.25m))
+        {
+            var accounts = plan.Accounts.Where(a => a.Category == AccountCategory.Education && a.BeneficiaryChildId == e.ChildId).ToList();
+            if (accounts.Count == 0) continue;
+
+            decimal surplus = e.ProjectedEducationSavings - e.DesiredFamilyContribution;
+
+            recs.Add(new Recommendation
+            {
+                Category = RecommendationCategory.Allocation,
+                Severity = RecommendationSeverity.Info,
+                Title = $"{e.ChildName}'s education savings are ahead of target",
+                Detail = $"{string.Join(", ", accounts.Select(a => a.Name))} {(accounts.Count == 1 ? "is" : "are")} projected to reach {e.ProjectedEducationSavings:C0}, about {surplus:C0} more than the {e.DesiredFamilyContribution:C0} funding target.",
+                Reasoning = "Consider redirecting new contributions elsewhere — toward retirement, a sibling's account, or another goal. If the funds truly won't be needed for education, a 529 can also change beneficiaries to another child, or, subject to IRS rules on account age and lifetime limits, roll leftover funds into the beneficiary's Roth IRA under SECURE 2.0."
             });
         }
     }

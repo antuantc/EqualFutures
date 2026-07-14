@@ -121,8 +121,24 @@ body {
 
 .ef-bar-chart { display: flex; align-items: flex-end; gap: 10px; height: 180px; padding-top: .5rem; }
 .ef-bar-chart .bar { flex: 1; display: flex; flex-direction: column; align-items: center; gap: .35rem; height: 100%; justify-content: flex-end; }
-.ef-bar-chart .bar > .fill { width: 100%; max-width: 46px; background: var(--ef-primary); border-radius: 6px 6px 0 0; }
+.ef-bar-chart .bar > .fill { width: 100%; max-width: 46px; background: var(--ef-primary); border-radius: 6px 6px 0 0; position: relative; }
 .ef-bar-chart .bar > .cap { font-size: .72rem; color: var(--ef-muted); }
+
+/* Portfolio growth chart: visible $ value above each bar, and a distinct color for
+   the retirement drawdown phase versus the pre-retirement accumulation phase. */
+.ef-bar-chart-labeled { padding-top: 1.85rem; }
+.ef-bar-chart .bar > .fill > .val {
+    position: absolute;
+    top: -1.3rem;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: .68rem;
+    font-weight: 650;
+    color: var(--ef-ink);
+    white-space: nowrap;
+}
+.ef-bar-chart .bar > .fill.fill-drawdown { background: var(--ef-accent); }
+
 
 .ef-table { width: 100%; border-collapse: collapse; }
 .ef-table th, .ef-table td { text-align: left; padding: .6rem .5rem; border-bottom: 1px solid var(--ef-border); font-size: .92rem; vertical-align: middle; }

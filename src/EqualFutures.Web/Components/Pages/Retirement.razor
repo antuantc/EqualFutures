@@ -52,6 +52,10 @@ else
                 <input type="range" class="form-range" min="0.02" max="0.10" step="0.005" @bind="a.PostRetirementReturn" @bind:event="oninput" @bind:after="Recompute" />
             </div>
             <div class="ef-field">
+                <label>Real estate appreciation: @Pct(a.RealEstateAppreciationRate)</label>
+                <input type="range" class="form-range" min="0" max="0.08" step="0.0025" @bind="a.RealEstateAppreciationRate" @bind:event="oninput" @bind:after="Recompute" />
+            </div>
+            <div class="ef-field">
                 <label>Safe withdrawal rate: @Pct(a.SafeWithdrawalRate)</label>
                 <input type="range" class="form-range" min="0.025" max="0.06" step="0.0025" @bind="a.SafeWithdrawalRate" @bind:event="oninput" @bind:after="Recompute" />
             </div>
@@ -59,6 +63,13 @@ else
                 <label>Plan until age: @a.PlanningHorizonAge</label>
                 <input type="range" class="form-range" min="85" max="100" step="1" @bind="a.PlanningHorizonAge" @bind:event="oninput" @bind:after="Recompute" />
             </div>
+            @foreach (var p in State.Plan.Parents)
+            {
+                <div class="ef-field">
+                    <label>@p.Name's retirement age: @p.PlannedRetirementAge</label>
+                    <input type="range" class="form-range" min="@Math.Max(50, p.CurrentAge)" max="75" step="1" @bind="p.PlannedRetirementAge" @bind:event="oninput" @bind:after="Recompute" />
+                </div>
+            }
             <div class="ef-actions">
                 <button class="btn btn-primary" @onclick="Save" disabled="@(!State.CanEdit)">Save assumptions</button>
                 @if (saved) { <span class="ef-pill good" style="align-self:center">Saved</span> }
@@ -70,11 +81,19 @@ else
             <table class="ef-table">
                 <tbody>
                     <tr><td>Annual spending need (future $)</td><td class="num">@r.AnnualSpendingNeed.ToString("C0")</td></tr>
-                    <tr><td>Guaranteed income (SS + pension)</td><td class="num">@r.AnnualGuaranteedIncome.ToString("C0")</td></tr>
+                    <tr><td>Guaranteed income (SS + pension + rental)</td><td class="num">@r.AnnualGuaranteedIncome.ToString("C0")</td></tr>
+                    @if (r.AnnualRealEstateIncome > 0m)
+                    {
+                        <tr><td style="padding-left:1.5rem;color:var(--ef-muted)">— of which, net rental income</td><td class="num">@r.AnnualRealEstateIncome.ToString("C0")</td></tr>
+                    }
                     <tr><td>Must come from portfolio</td><td class="num">@r.AnnualPortfolioNeed.ToString("C0")</td></tr>
                     <tr><td>Required nest egg</td><td class="num">@r.RequiredNestEgg.ToString("C0")</td></tr>
                     <tr><td>Projected nest egg</td><td class="num">@r.ProjectedNestEgg.ToString("C0")</td></tr>
                     <tr><td>Safe annual withdrawal</td><td class="num">@r.SafeAnnualWithdrawal.ToString("C0")</td></tr>
+                    @if (r.ProjectedRealEstateEquity > 0m)
+                    {
+                        <tr><td>Projected real estate equity <span title="Not counted toward the nest egg above — home equity isn't easily liquid.">ⓘ</span></td><td class="num">@r.ProjectedRealEstateEquity.ToString("C0")</td></tr>
+                    }
                 </tbody>
             </table>
             <div style="margin-top:1rem">
@@ -86,17 +105,23 @@ else
 
     <div class="ef-card" style="margin-top:1rem">
         <h2>Projected portfolio growth</h2>
+        <p style="color:var(--ef-muted);font-size:.85rem;margin-top:-.5rem">
+            Grows while working (teal), then draws down in retirement (orange) through age @a.PlanningHorizonAge.
+        </p>
         @if (r.GrowthTrajectory.Count > 1)
         {
-            var pts = Sample(r.GrowthTrajectory, 12);
+            var pts = Sample(r.GrowthTrajectory, 14);
             var max = r.GrowthTrajectory.Max(p => p.Balance);
-            <div class="ef-bar-chart">
+            <div class="ef-bar-chart ef-bar-chart-labeled">
                 @foreach (var p in pts)
                 {
                     var h = max > 0 ? (double)(p.Balance / max) * 100 : 0;
+                    var drawdown = p.Age > r.RetirementAge;
                     <div class="bar">
-                        <div class="fill" style="height:@h.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)%"
-                             title="@($"{p.Year}: {p.Balance:C0}")"></div>
+                        <div class="fill @(drawdown ? "fill-drawdown" : "")" style="height:@h.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)%"
+                             title="@($"{p.Year} (age {p.Age}): {p.Balance:C0}")">
+                            <span class="val">@FormatCompact(p.Balance)</span>
+                        </div>
                         <div class="cap">@p.Year</div>
                     </div>
                 }
@@ -123,6 +148,17 @@ else
     }
 
     private static string Pct(decimal v) => v.ToString("P1");
+
+    private static string FormatCompact(decimal value)
+    {
+        decimal abs = Math.Abs(value);
+        return abs switch
+        {
+            >= 1_000_000m => $"{value / 1_000_000m:0.#}M",
+            >= 1_000m => $"{value / 1_000m:0.#}K",
+            _ => value.ToString("0")
+        };
+    }
 
     private static IReadOnlyList<BalancePoint> Sample(IReadOnlyList<BalancePoint> points, int maxBars)
     {

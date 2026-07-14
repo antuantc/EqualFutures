@@ -41,4 +41,24 @@ public class Account
     /// evenly across parents.
     /// </summary>
     public int? OwnerParentId { get; set; }
+
+    // ----- Real estate (only meaningful when Category is AccountCategory.RealEstate) -----
+
+    /// <summary>Whether this property is a primary residence or a cash-flow rental.</summary>
+    public RealEstateUse? Use { get; set; }
+
+    /// <summary>Today's-dollars monthly rent collected before vacancy and expenses. Rental only.</summary>
+    public decimal? MonthlyRentToday { get; set; }
+
+    /// <summary>Share of the year the rental is expected to sit vacant, e.g. 0.08 for about a month/year.</summary>
+    public decimal VacancyRate { get; set; }
+
+    /// <summary>Monthly operating costs: property tax, insurance, HOA, management fee (today's dollars).</summary>
+    public decimal MonthlyOperatingExpenses { get; set; }
+
+    /// <summary>Share of property value reserved annually for capital expenditures (roof, HVAC, etc.).</summary>
+    public decimal AnnualCapExReservePercent { get; set; }
+
+    /// <summary>The mortgage, if any, secured by this property — used to net equity and debt service.</summary>
+    public int? SecuredByLiabilityId { get; set; }
 }

@@ -55,4 +55,45 @@ public class FinancialMathTests
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => FinancialMath.FutureValue(1000m, 0.05m, -1));
     }
+
+    [Fact]
+    public void AmortizedBalance_ZeroMonthsElapsed_ReturnsPrincipal()
+    {
+        Assert.Equal(300_000m, FinancialMath.AmortizedBalance(300_000m, 0.06m, 1_798.65m, 0));
+    }
+
+    [Fact]
+    public void AmortizedBalance_ZeroRate_SubtractsPaymentsLinearly()
+    {
+        Assert.Equal(2_000m, FinancialMath.AmortizedBalance(12_000m, 0m, 1_000m, 10));
+    }
+
+    [Fact]
+    public void AmortizedBalance_FullTermPayoff_ReachesZero()
+    {
+        // Derive the standard level-payment amount for a 30-year loan and confirm the
+        // balance formula is self-consistent: paying it for the full term pays it off.
+        decimal principal = 300_000m;
+        decimal monthlyRate = 0.06m / 12m;
+        int totalMonths = 360;
+        decimal growth = FinancialMath.Pow(1m + monthlyRate, totalMonths);
+        decimal payment = principal * monthlyRate * growth / (growth - 1m);
+
+        decimal balance = FinancialMath.AmortizedBalance(principal, 0.06m, payment, totalMonths);
+
+        Assert.Equal(0m, Math.Round(balance, 2));
+    }
+
+    [Fact]
+    public void AmortizedBalance_PartwayThroughTerm_DecreasesOverTime()
+    {
+        decimal principal = 300_000m;
+        decimal payment = 1_798.65m; // approx standard payment for 300k / 30yr / 6%
+
+        decimal early = FinancialMath.AmortizedBalance(principal, 0.06m, payment, 12);
+        decimal later = FinancialMath.AmortizedBalance(principal, 0.06m, payment, 120);
+
+        Assert.True(later < early);
+        Assert.True(early < principal);
+    }
 }

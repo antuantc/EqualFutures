@@ -82,10 +82,32 @@ public static class SamplePlanFactory
         plan.Accounts.Add(new Account { Name = "529 - Maya", Type = AccountType.FiveTwoNine, Category = AccountCategory.Education, TaxTreatment = TaxTreatment.TaxFree, CurrentBalance = 34_000m, AnnualContribution = 4_800m });
         plan.Accounts.Add(new Account { Name = "529 - Leo", Type = AccountType.FiveTwoNine, Category = AccountCategory.Education, TaxTreatment = TaxTreatment.TaxFree, CurrentBalance = 18_000m, AnnualContribution = 4_800m });
         plan.Accounts.Add(new Account { Name = "Checking & Savings", Type = AccountType.BankAccount, Category = AccountCategory.Other, TaxTreatment = TaxTreatment.Taxable, CurrentBalance = 40_000m, AnnualContribution = 0m });
-        plan.Accounts.Add(new Account { Name = "Home", Type = AccountType.RealEstate, Category = AccountCategory.Other, TaxTreatment = TaxTreatment.Taxable, CurrentBalance = 520_000m, AnnualContribution = 0m });
+        plan.Accounts.Add(new Account
+        {
+            Name = "Home",
+            Type = AccountType.RealEstate,
+            Category = AccountCategory.RealEstate,
+            TaxTreatment = TaxTreatment.Taxable,
+            CurrentBalance = 520_000m,
+            Use = RealEstateUse.PrimaryResidence
+        });
+        plan.Accounts.Add(new Account
+        {
+            Name = "Rental - Maple St",
+            Type = AccountType.RealEstate,
+            Category = AccountCategory.RealEstate,
+            TaxTreatment = TaxTreatment.Taxable,
+            CurrentBalance = 260_000m,
+            Use = RealEstateUse.Rental,
+            MonthlyRentToday = 2_100m,
+            VacancyRate = 0.08m,
+            MonthlyOperatingExpenses = 450m,
+            AnnualCapExReservePercent = 0.01m
+        });
 
         plan.Liabilities.Add(new Liability { Name = "Mortgage", Type = LiabilityType.Mortgage, CurrentBalance = 310_000m, InterestRate = 0.041m, MonthlyPayment = 2_150m });
-        plan.Liabilities.Add(new Liability { Name = "Auto Loan", Type = LiabilityType.Other, CurrentBalance = 18_000m, InterestRate = 0.069m, MonthlyPayment = 430m });
+        plan.Liabilities.Add(new Liability { Name = "Rental Mortgage", Type = LiabilityType.Mortgage, CurrentBalance = 190_000m, InterestRate = 0.055m, MonthlyPayment = 1_150m });
+        plan.Liabilities.Add(new Liability { Name = "Auto Loan", Type = LiabilityType.VehicleLoan, CurrentBalance = 18_000m, InterestRate = 0.069m, MonthlyPayment = 430m });
     }
 
     /// <summary>Links each education account to a child by matching the child's name in the account name.</summary>
@@ -99,6 +121,25 @@ public static class SamplePlanFactory
             if (match is not null)
             {
                 account.BeneficiaryChildId = match.Id;
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
+    /// <summary>Links each real estate account to its mortgage liability (rental vs. primary residence, by name).</summary>
+    public static bool LinkRealEstateMortgages(FinancialPlan plan)
+    {
+        bool changed = false;
+        foreach (var account in plan.Accounts.Where(a => a.Category == AccountCategory.RealEstate && a.SecuredByLiabilityId is null))
+        {
+            bool wantsRentalMortgage = account.Use == RealEstateUse.Rental;
+            var match = plan.Liabilities.FirstOrDefault(l =>
+                l.Type == LiabilityType.Mortgage &&
+                l.Name.Contains("Rental", StringComparison.OrdinalIgnoreCase) == wantsRentalMortgage);
+            if (match is not null)
+            {
+                account.SecuredByLiabilityId = match.Id;
                 changed = true;
             }
         }

@@ -18,6 +18,13 @@ public class PlanAssumptions
     /// <summary>Expected nominal annual investment return during retirement (typically more conservative).</summary>
     public decimal PostRetirementReturn { get; set; } = 0.05m;
 
+    /// <summary>
+    /// Default appreciation rate for real estate accounts, used when an account doesn't
+    /// set its own <see cref="Account.ExpectedReturnOverride"/>. Real estate historically
+    /// appreciates slower than equities, so this is kept separate from PreRetirementReturn.
+    /// </summary>
+    public decimal RealEstateAppreciationRate { get; set; } = 0.035m;
+
     /// <summary>Safe withdrawal rate for retirement (the "4% rule" default).</summary>
     public decimal SafeWithdrawalRate { get; set; } = 0.04m;
 

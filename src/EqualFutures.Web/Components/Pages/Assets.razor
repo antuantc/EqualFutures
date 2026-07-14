@@ -53,7 +53,7 @@ else
                             <select class="form-select form-select-sm" @bind="a.Category">
                                 @foreach (var g in Enum.GetValues<AccountCategory>())
                                 {
-                                    <option value="@g">@g</option>
+                                    <option value="@g">@Humanize(g)</option>
                                 }
                             </select>
                         </td>
@@ -99,6 +99,57 @@ else
         </div>
         <button class="btn btn-outline-secondary" style="margin-top:.75rem" @onclick="AddAccount">+ Add account</button>
     </div>
+
+    @if (plan.Accounts.Any(a => a.Category == AccountCategory.RealEstate))
+    {
+        <div class="ef-card" style="margin-bottom:1rem">
+            <h2>Real estate details</h2>
+            <p style="color:var(--ef-muted);font-size:.85rem;margin-top:-.5rem">
+                Set how each property is used so it grows — and, for rentals, contributes income — correctly in your retirement projection.
+            </p>
+            @foreach (var re in plan.Accounts.Where(a => a.Category == AccountCategory.RealEstate))
+            {
+                <div class="ef-grid ef-grid-4 ef-edit-row">
+                    <div class="ef-field">
+                        <label>@re.Name</label>
+                        <select class="form-select" @bind="re.Use">
+                            <option value="@RealEstateUse.PrimaryResidence">Primary residence</option>
+                            <option value="@RealEstateUse.Rental">Rental / cash-flow property</option>
+                        </select>
+                    </div>
+                    <div class="ef-field">
+                        <label>Secured by</label>
+                        <select class="form-select" @bind="re.SecuredByLiabilityId">
+                            <option value="">No mortgage</option>
+                            @foreach (var l in plan.Liabilities.Where(l => l.Type == LiabilityType.Mortgage))
+                            {
+                                <option value="@l.Id">@l.Name</option>
+                            }
+                        </select>
+                    </div>
+                    @if (re.Use == RealEstateUse.Rental)
+                    {
+                        <div class="ef-field">
+                            <label>Monthly rent</label>
+                            <CurrencyInput Value="@(re.MonthlyRentToday ?? 0m)" ValueChanged="@(v => re.MonthlyRentToday = v)" />
+                        </div>
+                        <div class="ef-field">
+                            <label>Vacancy rate: @((re.VacancyRate * 100).ToString("0.#"))%</label>
+                            <input type="range" class="form-range" min="0" max="0.3" step="0.01" @bind="re.VacancyRate" @bind:event="oninput" />
+                        </div>
+                        <div class="ef-field">
+                            <label>Monthly operating expenses</label>
+                            <CurrencyInput @bind-Value="re.MonthlyOperatingExpenses" />
+                        </div>
+                        <div class="ef-field">
+                            <label>Capital expenditure reserve: @((re.AnnualCapExReservePercent * 100).ToString("0.#"))%/yr</label>
+                            <input type="range" class="form-range" min="0" max="0.03" step="0.0025" @bind="re.AnnualCapExReservePercent" @bind:event="oninput" />
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
 
     <div class="ef-card" style="margin-bottom:1rem">
         <h2>Liabilities</h2>
@@ -169,6 +220,12 @@ else
     private static bool CanAssignToParent(Account account) =>
         account.Category == AccountCategory.Investment;
 
+    private static string Humanize(AccountCategory c) => c switch
+    {
+        AccountCategory.RealEstate => "Real Estate",
+        _ => c.ToString()
+    };
+
     private static string Humanize(AccountType t) => t switch
     {
         AccountType.FourZeroOneK => "401(k)",
@@ -197,6 +254,9 @@ else
     {
         LiabilityType.Mortgage => "Mortgage",
         LiabilityType.StudentLoan => "Student loan",
+        LiabilityType.VehicleLoan => "Vehicle loan",
+        LiabilityType.CreditCard => "Credit card",
+        LiabilityType.PersonalLoan => "Personal loan",
         LiabilityType.Other => "Other",
         _ => t.ToString()
     };

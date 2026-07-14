@@ -64,6 +64,21 @@ public static class FinancialMath
         => (1m + nominalRate) / (1m + inflationRate) - 1m;
 
     /// <summary>
+    /// Remaining principal on an amortizing loan (e.g. a mortgage) after making
+    /// <paramref name="monthlyPayment"/> for <paramref name="monthsElapsed"/> months.
+    /// </summary>
+    public static decimal AmortizedBalance(decimal principal, decimal annualRate, decimal monthlyPayment, int monthsElapsed)
+    {
+        if (monthsElapsed <= 0) return Math.Max(0m, principal);
+        if (annualRate <= 0m) return Math.Max(0m, principal - monthlyPayment * monthsElapsed);
+
+        decimal monthlyRate = annualRate / 12m;
+        decimal growth = Pow(1m + monthlyRate, monthsElapsed);
+        decimal balance = principal * growth - monthlyPayment * ((growth - 1m) / monthlyRate);
+        return Math.Max(0m, balance);
+    }
+
+    /// <summary>
     /// Integer-exponent power for <see cref="decimal"/> to avoid double rounding drift in
     /// financial figures. Supports negative exponents.
     /// </summary>
