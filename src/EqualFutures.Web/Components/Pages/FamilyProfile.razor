@@ -33,9 +33,16 @@ else
         </div>
         <div class="ef-field" style="max-width:420px">
             <label>Household retirement spending / yr</label>
-            <div class="input-group">
-                <span class="input-group-text">$</span>
-                <input type="number" class="form-control" @bind="plan.ExpectedAnnualRetirementSpending" disabled="@(!State.CanEdit)" />
+            <CurrencyInput @bind-Value="plan.ExpectedAnnualRetirementSpending" Disabled="@(!State.CanEdit)" />
+        </div>
+        <div class="ef-field">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="showRetirementEquity"
+                       @bind="plan.ShowRetirementEquity" disabled="@(!State.CanEdit)" />
+                <label class="form-check-label" for="showRetirementEquity">Show retirement equity breakdown by parent</label>
+            </div>
+            <div style="color:var(--ef-muted);font-size:.82rem;margin-top:.15rem">
+                Off by default — most households only want the combined household view on the Retirement page.
             </div>
         </div>
         @if (State.CanEdit)
@@ -67,11 +74,18 @@ else
         {
             <div class="ef-grid ef-grid-4 ef-edit-row">
                 <div class="ef-field"><label>Name</label><input class="form-control" @bind="p.Name" /></div>
-                <div class="ef-field"><label>Current age</label><input type="number" class="form-control" @bind="p.CurrentAge" /></div>
+                <div class="ef-field"><label>Birth date</label><input type="date" class="form-control" @bind="p.BirthDate" /></div>
                 <div class="ef-field"><label>Retirement age</label><input type="number" class="form-control" @bind="p.PlannedRetirementAge" /></div>
-                <div class="ef-field"><label>Annual income</label><div class="input-group"><span class="input-group-text">$</span><input type="number" class="form-control" @bind="p.AnnualIncome" /></div></div>
-                <div class="ef-field"><label>Social Security / yr</label><div class="input-group"><span class="input-group-text">$</span><input type="number" class="form-control" @bind="p.EstimatedAnnualSocialSecurity" /></div></div>
-                <div class="ef-field"><label>Pension / yr</label><div class="input-group"><span class="input-group-text">$</span><input type="number" class="form-control" @bind="p.AnnualPensionIncome" /></div></div>
+                <div class="ef-field"><label>Annual income</label><CurrencyInput @bind-Value="p.AnnualIncome" /></div>
+                <div class="ef-field"><label>Social Security / yr</label><CurrencyInput @bind-Value="p.EstimatedAnnualSocialSecurity" /></div>
+                <div class="ef-field">
+                    <label>Social Security claiming age</label>
+                    <input type="number" min="62" max="70" class="form-control" @bind="p.SocialSecurityClaimingAge" />
+                </div>
+                <div class="ef-field"><label>Pension / yr</label><CurrencyInput @bind-Value="p.AnnualPensionIncome" /></div>
+                <div class="ef-field">
+                    <span style="color:var(--ef-muted);font-size:.85rem">Current age: @p.CurrentAge</span>
+                </div>
                 <div class="ef-field">
                     <button class="btn btn-outline-danger" @onclick="() => RemoveParent(p)" disabled="@(!State.CanEdit)">Remove</button>
                 </div>
@@ -99,7 +113,7 @@ else
                     </select>
                 </div>
                 <div class="ef-field"><label>Family share to fund (1.00 = 100%)</label><input type="number" min="0" step="0.05" placeholder="1.00" class="form-control" @bind="c.DesiredFundingPercent" /></div>
-                <div class="ef-field"><label>Scholarships / yr</label><div class="input-group"><span class="input-group-text">$</span><input type="number" class="form-control" @bind="c.ExpectedAnnualScholarships" /></div></div>
+                <div class="ef-field"><label>Scholarships / yr</label><CurrencyInput @bind-Value="c.ExpectedAnnualScholarships" /></div>
                 <div class="ef-field">
                     <button class="btn btn-outline-danger" @onclick="() => RemoveChild(c)" disabled="@(!State.CanEdit)">Remove</button>
                 </div>
@@ -141,7 +155,12 @@ else
         saved = false;
     }
 
-    private void AddParent() => State.Plan!.Parents.Add(new Parent { Name = "New parent", CurrentAge = 40, PlannedRetirementAge = 65 });
+    private void AddParent() => State.Plan!.Parents.Add(new Parent
+    {
+        Name = "New parent",
+        BirthDate = new DateOnly(DateTime.UtcNow.Year - 40, 1, 1),
+        PlannedRetirementAge = 65
+    });
     private void RemoveParent(Parent p) => State.Plan!.Parents.Remove(p);
 
     private void AddChild()

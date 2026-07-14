@@ -7,6 +7,8 @@ public class PartnerEquityCalculatorTests
 {
     private readonly PartnerEquityCalculator _calc = new();
 
+    private static DateOnly BirthDateForAge(int age) => new(DateTime.UtcNow.Year - age, 1, 1);
+
     private static FinancialPlan PlanWithTwoParents(int? ownerParentIdA = null, int? ownerParentIdB = null)
     {
         var plan = new FinancialPlan
@@ -14,8 +16,8 @@ public class PartnerEquityCalculatorTests
             Assumptions = new PlanAssumptions { PreRetirementReturn = 0.05m },
             Parents =
             {
-                new Parent { Id = 1, Name = "Alex", CurrentAge = 40, PlannedRetirementAge = 65 },
-                new Parent { Id = 2, Name = "Sam", CurrentAge = 40, PlannedRetirementAge = 65 }
+                new Parent { Id = 1, Name = "Alex", BirthDate = BirthDateForAge(40), PlannedRetirementAge = 65 },
+                new Parent { Id = 2, Name = "Sam", BirthDate = BirthDateForAge(40), PlannedRetirementAge = 65 }
             },
             Accounts =
             {
@@ -55,8 +57,8 @@ public class PartnerEquityCalculatorTests
             Assumptions = new PlanAssumptions { PreRetirementReturn = 0.05m },
             Parents =
             {
-                new Parent { Id = 1, Name = "Alex", CurrentAge = 40, PlannedRetirementAge = 65 },
-                new Parent { Id = 2, Name = "Sam", CurrentAge = 40, PlannedRetirementAge = 65 }
+                new Parent { Id = 1, Name = "Alex", BirthDate = BirthDateForAge(40), PlannedRetirementAge = 65 },
+                new Parent { Id = 2, Name = "Sam", BirthDate = BirthDateForAge(40), PlannedRetirementAge = 65 }
             },
             Accounts =
             {

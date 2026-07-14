@@ -3,6 +3,7 @@ using System;
 using EqualFutures.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EqualFutures.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(FinancialDbContext))]
-    partial class FinancialDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260714164700_ParentBirthDate")]
+    partial class ParentBirthDate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.9");
@@ -133,9 +136,6 @@ namespace EqualFutures.Infrastructure.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<int>("PreferredFairnessMetric")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("ShowRetirementEquity")
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("UpdatedUtc")

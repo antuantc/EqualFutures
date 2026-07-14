@@ -15,6 +15,19 @@
 {
     <p>Loading…</p>
 }
+else if (!State.Plan.ShowRetirementEquity)
+{
+    <div class="ef-card">
+        <h2>This view is turned off</h2>
+        <p>Most households only need the combined view on the <a href="retirement">Retirement</a> page. Turn this on if you'd like to compare each parent's retirement trajectory separately.</p>
+        @if (State.CanEdit)
+        {
+            <button class="btn btn-primary" @onclick="EnableEquityView" disabled="@busy">
+                @(busy ? "Enabling…" : "Enable retirement equity view")
+            </button>
+        }
+    </div>
+}
 else if (State.Plan.Parents.Count < 2)
 {
     <div class="ef-card">
@@ -43,6 +56,16 @@ else
 @code {
     private decimal monthlyTopUp;
     private int careerBreakYears;
+    private bool busy;
 
     protected override async Task OnInitializedAsync() => await State.EnsureLoadedAsync();
+
+    private async Task EnableEquityView()
+    {
+        if (State.Plan is null) return;
+        busy = true;
+        State.Plan.ShowRetirementEquity = true;
+        await State.SaveAsync();
+        busy = false;
+    }
 }

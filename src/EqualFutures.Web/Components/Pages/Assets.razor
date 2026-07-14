@@ -28,6 +28,7 @@ else
 
     <div class="ef-card" style="margin-bottom:1rem">
         <h2>Accounts &amp; assets</h2>
+        <div class="ef-table-scroll">
         <table class="ef-table ef-table-cards">
             <thead>
                 <tr>
@@ -64,8 +65,8 @@ else
                                 }
                             </select>
                         </td>
-                        <td class="num" data-label="Balance"><div class="input-group input-group-sm"><span class="input-group-text">$</span><input type="number" class="form-control form-control-sm" @bind="a.CurrentBalance" /></div></td>
-                        <td class="num" data-label="Annual contribution"><div class="input-group input-group-sm"><span class="input-group-text">$</span><input type="number" class="form-control form-control-sm" @bind="a.AnnualContribution" /></div></td>
+                        <td class="num" data-label="Balance"><CurrencyInput @bind-Value="a.CurrentBalance" InputClass="form-control-sm" /></td>
+                        <td class="num" data-label="Annual contribution"><CurrencyInput @bind-Value="a.AnnualContribution" InputClass="form-control-sm" /></td>
                         <td data-label="For child">
                             @if (CanAssignToChild(a))
                             {
@@ -95,11 +96,13 @@ else
                 }
             </tbody>
         </table>
+        </div>
         <button class="btn btn-outline-secondary" style="margin-top:.75rem" @onclick="AddAccount">+ Add account</button>
     </div>
 
     <div class="ef-card" style="margin-bottom:1rem">
         <h2>Liabilities</h2>
+        <div class="ef-table-scroll">
         <table class="ef-table ef-table-cards">
             <thead>
                 <tr><th>Name</th><th>Type</th><th class="num">Balance</th><th class="num">Rate (e.g. 0.065 = 6.5%)</th><th class="num">Monthly payment</th><th></th></tr>
@@ -117,14 +120,15 @@ else
                                 }
                             </select>
                         </td>
-                        <td class="num" data-label="Balance"><div class="input-group input-group-sm"><span class="input-group-text">$</span><input type="number" class="form-control form-control-sm" @bind="l.CurrentBalance" /></div></td>
+                        <td class="num" data-label="Balance"><CurrencyInput @bind-Value="l.CurrentBalance" InputClass="form-control-sm" /></td>
                         <td class="num" data-label="Rate (e.g. 0.065 = 6.5%)"><input type="number" step="0.001" class="form-control form-control-sm" @bind="l.InterestRate" /></td>
-                        <td class="num" data-label="Monthly payment"><div class="input-group input-group-sm"><span class="input-group-text">$</span><input type="number" class="form-control form-control-sm" @bind="l.MonthlyPayment" /></div></td>
+                        <td class="num" data-label="Monthly payment"><CurrencyInput @bind-Value="l.MonthlyPayment" InputClass="form-control-sm" /></td>
                         <td data-label=""><button class="btn btn-sm btn-outline-danger" @onclick="() => plan.Liabilities.Remove(l)">Remove</button></td>
                     </tr>
                 }
             </tbody>
         </table>
+        </div>
         <button class="btn btn-outline-secondary" style="margin-top:.75rem" @onclick="AddLiability">+ Add liability</button>
     </div>
 

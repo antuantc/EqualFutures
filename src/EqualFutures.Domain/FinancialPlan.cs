@@ -29,6 +29,12 @@ public class FinancialPlan
     /// <summary>The lens the household currently uses to judge fairness across children.</summary>
     public FairnessMetric PreferredFairnessMetric { get; set; } = FairnessMetric.EqualInflationAdjustedValue;
 
+    /// <summary>
+    /// Whether the Retirement Equity page (per-parent trajectory comparison) is
+    /// enabled. Off by default — most households only want the combined view.
+    /// </summary>
+    public bool ShowRetirementEquity { get; set; }
+
     public List<Parent> Parents { get; set; } = new();
     public List<Child> Children { get; set; } = new();
     public List<Account> Accounts { get; set; } = new();

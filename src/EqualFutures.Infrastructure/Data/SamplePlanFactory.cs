@@ -35,7 +35,7 @@ public static class SamplePlanFactory
         plan.Parents.Add(new Parent
         {
             Name = "Jordan",
-            CurrentAge = 42,
+            BirthDate = new DateOnly(thisYear - 42, 1, 15),
             PlannedRetirementAge = 65,
             AnnualIncome = 120_000m,
             EstimatedAnnualSocialSecurity = 30_000m,
@@ -45,7 +45,7 @@ public static class SamplePlanFactory
         plan.Parents.Add(new Parent
         {
             Name = "Alex",
-            CurrentAge = 40,
+            BirthDate = new DateOnly(thisYear - 40, 1, 15),
             PlannedRetirementAge = 65,
             AnnualIncome = 95_000m,
             EstimatedAnnualSocialSecurity = 26_000m,

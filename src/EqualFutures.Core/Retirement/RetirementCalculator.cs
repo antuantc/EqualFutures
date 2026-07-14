@@ -43,11 +43,15 @@ public class RetirementCalculator : IRetirementCalculator
         decimal annualSpendingNeed = FinancialMath.InflateValue(todaysSpending, assumptions.InflationRate, years);
 
         // Guaranteed income assumed to be inflation-indexed to the retirement date.
+        // Social Security cannot start before age 62 (or a parent's own later claiming
+        // age) — if a parent retires before then, their benefit isn't counted yet.
         decimal annualGuaranteedIncome = plan.Parents.Sum(p =>
-            FinancialMath.InflateValue(
-                p.EstimatedAnnualSocialSecurity + p.AnnualPensionIncome,
-                assumptions.InflationRate,
-                years));
+        {
+            int ageAtRetirement = p.CurrentAge + years;
+            int earliestClaimingAge = Math.Max(62, p.SocialSecurityClaimingAge);
+            decimal socialSecurity = ageAtRetirement >= earliestClaimingAge ? p.EstimatedAnnualSocialSecurity : 0m;
+            return FinancialMath.InflateValue(socialSecurity + p.AnnualPensionIncome, assumptions.InflationRate, years);
+        });
 
         decimal annualPortfolioNeed = Math.Max(0m, annualSpendingNeed - annualGuaranteedIncome);
 

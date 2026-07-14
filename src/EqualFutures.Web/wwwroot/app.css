@@ -130,6 +130,11 @@ body {
 .ef-table td.num, .ef-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .ef-table input, .ef-table select { min-width: 8.5rem; }
 
+/* Lets wide tables (many editable columns) scroll horizontally within their card
+   instead of squeezing every input down to an unreadable width. */
+.ef-table-scroll { overflow-x: auto; }
+.ef-table-scroll .ef-table { width: max-content; min-width: 100%; }
+
 .ef-rec { border-left: 4px solid var(--ef-primary); background: var(--ef-primary-soft); border-radius: 8px; padding: .8rem 1rem; margin-bottom: .75rem; }
 .ef-rec.warn { border-left-color: var(--ef-warn); background: #fdf3e8; }
 .ef-rec.info { border-left-color: #3a78d9; background: #eaf1fc; }

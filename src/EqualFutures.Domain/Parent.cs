@@ -11,8 +11,19 @@ public class Parent
     [Required, MaxLength(80)]
     public string Name { get; set; } = string.Empty;
 
-    public int CurrentAge { get; set; }
+    public DateOnly BirthDate { get; set; }
     public int PlannedRetirementAge { get; set; } = 65;
+
+    /// <summary>Current age, computed from <see cref="BirthDate"/> so it never needs manual updating.</summary>
+    public int CurrentAge => AgeAsOf(DateOnly.FromDateTime(DateTime.UtcNow));
+
+    /// <summary>Age as of a specific date.</summary>
+    public int AgeAsOf(DateOnly asOf)
+    {
+        var age = asOf.Year - BirthDate.Year;
+        if (asOf < BirthDate.AddYears(age)) age--;
+        return age;
+    }
 
     /// <summary>Current gross annual employment income.</summary>
     public decimal AnnualIncome { get; set; }

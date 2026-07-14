@@ -24,6 +24,9 @@ public class PlanState(
     public string? UserId { get; private set; }
     public string? UserEmail { get; private set; }
 
+    /// <summary>Raised whenever the plan or its analysis is (re)loaded, saved, or recomputed.</summary>
+    public event Action? Changed;
+
     public bool IsLoaded => Plan is not null;
 
     /// <summary>Adults and owners may edit the plan; children have read-only access.</summary>
@@ -77,6 +80,7 @@ public class PlanState(
     {
         if (Plan is not null)
             Summary = analysis.Analyze(Plan);
+        Changed?.Invoke();
     }
 
     /// <summary>Persists the plan and refreshes the analysis. No-op for read-only members.</summary>
