@@ -29,6 +29,45 @@ public class PlanService(FinancialDbContext db, IAppSettingsService appSettings)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
 
+        // A pending invitation addressed to this user's email always wins, even if they
+        // already belong to (or own) some other plan. Without this check running first,
+        // a spouse who ever used the app on their own before being invited — e.g. they
+        // registered and got their own auto-created household, or an old legacy plan —
+        // would keep resolving straight back to that plan below and the invitation would
+        // stay stuck on "Pending" forever, no matter how many times they log in.
+        if (!string.IsNullOrWhiteSpace(userEmail))
+        {
+            var normalizedEmail = userEmail.Trim().ToLowerInvariant();
+            var invitation = await db.PlanInvitations
+                .Where(i => i.Email == normalizedEmail && i.Status == InvitationStatus.Pending)
+                .OrderByDescending(i => i.CreatedUtc)
+                .FirstOrDefaultAsync(ct);
+
+            if (invitation is not null && invitation.IsPending(DateTime.UtcNow))
+            {
+                var alreadyMember = await db.PlanMembers
+                    .AnyAsync(m => m.FinancialPlanId == invitation.FinancialPlanId && m.UserId == userId, ct);
+                if (!alreadyMember)
+                {
+                    db.PlanMembers.Add(new PlanMember
+                    {
+                        FinancialPlanId = invitation.FinancialPlanId,
+                        UserId = userId,
+                        Email = normalizedEmail,
+                        Role = invitation.Role,
+                        JoinedUtc = DateTime.UtcNow
+                    });
+                }
+                invitation.Status = InvitationStatus.Accepted;
+                invitation.AcceptedByUserId = userId;
+                invitation.AcceptedUtc = DateTime.UtcNow;
+                await db.SaveChangesAsync(ct);
+
+                return await LoadByIdAsync(invitation.FinancialPlanId, ct)
+                       ?? throw new InvalidOperationException("Plan membership references a missing plan.");
+            }
+        }
+
         // Most recently joined plan the user is a member of.
         var planId = await db.PlanMembers
             .Where(m => m.UserId == userId)
@@ -55,35 +94,6 @@ public class PlanService(FinancialDbContext db, IAppSettingsService appSettings)
                 });
                 await db.SaveChangesAsync(ct);
                 planId = legacy.Id;
-            }
-        }
-
-        // A user who registered directly (rather than clicking the join link) may
-        // still have a pending invitation waiting for their email — link it now
-        // instead of giving them a disconnected, brand-new household.
-        if (planId is null && !string.IsNullOrWhiteSpace(userEmail))
-        {
-            var normalizedEmail = userEmail.Trim().ToLowerInvariant();
-            var invitation = await db.PlanInvitations
-                .Where(i => i.Email == normalizedEmail && i.Status == InvitationStatus.Pending)
-                .OrderByDescending(i => i.CreatedUtc)
-                .FirstOrDefaultAsync(ct);
-
-            if (invitation is not null && invitation.IsPending(DateTime.UtcNow))
-            {
-                db.PlanMembers.Add(new PlanMember
-                {
-                    FinancialPlanId = invitation.FinancialPlanId,
-                    UserId = userId,
-                    Email = normalizedEmail,
-                    Role = invitation.Role,
-                    JoinedUtc = DateTime.UtcNow
-                });
-                invitation.Status = InvitationStatus.Accepted;
-                invitation.AcceptedByUserId = userId;
-                invitation.AcceptedUtc = DateTime.UtcNow;
-                await db.SaveChangesAsync(ct);
-                planId = invitation.FinancialPlanId;
             }
         }
 

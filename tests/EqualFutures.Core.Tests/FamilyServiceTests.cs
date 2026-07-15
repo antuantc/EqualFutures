@@ -101,6 +101,41 @@ public class FamilyServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetOrCreate_UserWithOwnExistingPlan_StillJoinsPendingInvitation()
+    {
+        int invitedPlanId;
+        await using (var ctx = NewContext())
+        {
+            var plans = new PlanService(ctx, new AppSettingsService(ctx));
+
+            // The spouse already used the app on their own before ever being invited,
+            // so they own a separate, unrelated household plan.
+            var spouseOwnPlan = await plans.GetOrCreateAsync("spouse", "spouse@example.com");
+            Assert.NotEqual(0, spouseOwnPlan.Id);
+
+            var family = new FamilyService(ctx);
+            var ownerPlan = await plans.GetOrCreateAsync("owner", "owner@example.com");
+            invitedPlanId = ownerPlan.Id;
+            await family.InviteAsync(invitedPlanId, "owner", "Spouse@Example.com", PlanRole.Adult);
+        }
+
+        // Logging in again (without ever clicking the join link) must still resolve to
+        // the invited family plan, not keep returning their old, disconnected one.
+        await using (var ctx = NewContext())
+        {
+            var plans = new PlanService(ctx, new AppSettingsService(ctx));
+            var resolved = await plans.GetOrCreateAsync("spouse", "spouse@example.com");
+
+            Assert.Equal(invitedPlanId, resolved.Id);
+            var member = Assert.Single(resolved.Members, m => m.UserId == "spouse");
+            Assert.Equal(PlanRole.Adult, member.Role);
+
+            var invitation = Assert.Single(resolved.Invitations);
+            Assert.Equal(InvitationStatus.Accepted, invitation.Status);
+        }
+    }
+
+    [Fact]
     public async Task Accept_WithWrongEmail_IsRejected()
     {
         await using var ctx = NewContext();
